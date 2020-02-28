@@ -1,0 +1,3 @@
+black~=19.10b0
+pipdeptree~=0.13.2
+pylint~=2.4.4
