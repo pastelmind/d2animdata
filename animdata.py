@@ -1,6 +1,7 @@
 #!/usr/bin/env python
+"""Extracts and saves AnimData.D2"""
+
 import struct
-from functools import lru_cache
 from itertools import chain
 from pprint import pprint
 from typing import Iterable, List, NamedTuple, Tuple
@@ -18,13 +19,13 @@ def hash_cof_name(cof_name: bytes) -> int:
 class Record(NamedTuple):
     """Represents an AnimData record entry."""
 
-    cof_name: str
+    cof_name: bytes
     frames_per_direction: int
     animation_speed: int
     action_frames: Tuple[Tuple[int, int], ...]
 
     @property
-    def token(self) -> str:
+    def token(self) -> bytes:
         """Returns the animation token portion of the COF name."""
         return self.cof_name[:2]
 
@@ -123,40 +124,44 @@ def sorted_records_alphabetically(blocks: List[List[Record]]) -> List[Record]:
     )
 
 
-def sort_tokens(all_tokens: Iterable[Iterable[str]]) -> List[str]:
+def make_token_order_keys(all_tokens: Iterable[Iterable[bytes]]) -> List[bytes]:
     # Represents a directed, possibly-acyclic graph
-    token_to_preceding_tokens = {}
+    token_to_prev_tokens = {}
     for tokens in all_tokens:
         for index, token in enumerate(tokens):
-            preceding_tokens = token_to_preceding_tokens.setdefault(token, set())
+            prev_tokens = token_to_prev_tokens.setdefault(token, set())
             if index > 0:
-                preceding_tokens.add(tokens[index - 1])
+                prev_tokens.add(tokens[index - 1])
 
-    # Perform a topological sort using depth-first search
-    sorted_tokens = []
+    # Use depth-first search to visit each node (token)
+    token_order_keys = {}
     is_visiting = {}
 
-    def visit(token):
-        preceding_tokens = token_to_preceding_tokens.get(token)
-        if preceding_tokens is None:
-            return
+    def compute_order_key(token: bytes) -> None:
+        try:
+            return token_order_keys[token]
+        except KeyError:
+            pass
 
         if is_visiting.get(token):
             warn(f"Cycle detected, cannot sort token {token} reliably")
-            return
+            return 0
 
-        is_visiting[token] = True
-        for preceding_token in token_to_preceding_tokens.get(token, []):
-            visit(preceding_token)
-        del is_visiting[token]
+        token_order_key = 0
+        prev_tokens = token_to_prev_tokens[token]
+        if prev_tokens:
+            is_visiting[token] = True
+            token_order_key = max(map(compute_order_key, prev_tokens)) + 1
+            is_visiting[token] = False
 
-        sorted_tokens.append(token)
-        del token_to_preceding_tokens[token]
+        del token_to_prev_tokens[token]
+        token_order_keys[token] = token_order_key
+        return token_order_key
 
-    while token_to_preceding_tokens:
-        visit(next(iter(token_to_preceding_tokens)))
+    while token_to_prev_tokens:
+        compute_order_key(next(iter(token_to_prev_tokens)))
 
-    return sorted_tokens
+    return token_order_keys
 
 
 def sorted_records_preserve(blocks: List[List[Record]]) -> List[Record]:
@@ -168,11 +173,10 @@ def sorted_records_preserve(blocks: List[List[Record]]) -> List[Record]:
     all_tokens = [
         list(dict.fromkeys(record.token for record in block)) for block in blocks
     ]
-    all_tokens = sort_tokens(all_tokens)
+    token_order_keys = make_token_order_keys(all_tokens)
 
-    token_to_index = {token: index for index, token in enumerate(all_tokens)}
     return sorted(
-        chain.from_iterable(blocks), key=lambda record: token_to_index[record.token],
+        chain.from_iterable(blocks), key=lambda record: token_order_keys[record.token]
     )
 
 
