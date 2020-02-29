@@ -2,6 +2,7 @@
 """Extracts and saves AnimData.D2"""
 
 import struct
+from functools import cmp_to_key
 from itertools import chain
 from pprint import pprint
 from typing import Iterable, List, NamedTuple, Tuple
@@ -127,7 +128,7 @@ def sorted_records_alphabetically(blocks: List[List[Record]]) -> List[Record]:
 def make_token_order_keys(all_tokens: Iterable[Iterable[bytes]]) -> List[bytes]:
     # Represents a directed, possibly-acyclic graph
     token_to_prev_tokens = {}
-    for tokens in all_tokens:
+    for tokens in map(list, all_tokens):
         for index, token in enumerate(tokens):
             prev_tokens = token_to_prev_tokens.setdefault(token, set())
             if index > 0:
@@ -170,14 +171,37 @@ def sorted_records_preserve(blocks: List[List[Record]]) -> List[Record]:
 
     Note: This does NOT preserve the original record order in the hash table!
     """
-    all_tokens = [
-        list(dict.fromkeys(record.token for record in block)) for block in blocks
-    ]
-    token_order_keys = make_token_order_keys(all_tokens)
-
-    return sorted(
+    # First, sort using the ordering of tokens (not very accurate)
+    token_order_keys = make_token_order_keys(
+        dict.fromkeys(record.token for record in block).keys() for block in blocks
+    )
+    sorted_records = sorted(
         chain.from_iterable(blocks), key=lambda record: token_order_keys[record.token]
     )
+
+    # Next, sort using the ordering of COF names
+    cof_comparisons = {}
+    for block in blocks:
+        for index, record in enumerate(block):
+            if index == 0:
+                continue
+            prev_record = block[index - 1]
+
+            cof_name = record.cof_name
+            prev_cof_name = prev_record.cof_name
+            if cof_comparisons.get((prev_cof_name, cof_name)) == -1:
+                warn(
+                    f"COF name pair {cof_name}, {prev_cof_name} already exists "
+                    f"in reverse direction!"
+                )
+            else:
+                cof_comparisons[cof_name, prev_cof_name] = -1
+                cof_comparisons[prev_cof_name, cof_name] = 1
+
+    sorted_records.sort(
+        key=cmp_to_key(lambda a, b: cof_comparisons.get((a.cof_name, b.cof_name), 0))
+    )
+    return sorted_records
 
 
 def main() -> None:
