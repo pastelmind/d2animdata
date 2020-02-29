@@ -62,6 +62,66 @@ def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
     )
 
 
+DWORD_MAX = 0xFFFFFFFF
+
+
+def pack_record(record: Record) -> bytes:
+    """Packs a single AnimData record."""
+    cof_name = record.cof_name
+    if len(cof_name) != 8:
+        raise ValueError(
+            f"COF name must be 8 bytes, including the null terminator."
+            f" ({cof_name!r} is {len(cof_name)} bytes long)"
+        )
+    if cof_name[-1] != 0:
+        raise ValueError(
+            f"COF name must be terminated with a null byte. "
+            f"(found {cof_name[-1]!r} at end of {cof_name!r})"
+        )
+
+    frames_per_direction = record.frames_per_direction
+    if not 0 <= frames_per_direction <= DWORD_MAX:
+        raise ValueError(
+            f"frames_per_direction must be between 0 and {DWORD_MAX}."
+            f"(current value is {frames_per_direction!r})"
+        )
+
+    animation_speed = record.animation_speed
+    if not 0 <= animation_speed <= DWORD_MAX:
+        raise ValueError(
+            f"animation_speed must be between 0 and {DWORD_MAX}."
+            f"(current value is {animation_speed!r})"
+        )
+
+    frame_data = [0] * 144
+    for trigger in record.triggers:
+        if not 1 <= trigger.code <= 3:
+            raise ValueError(f"Invalid trigger code {trigger.code!r} in {record!r}")
+        if trigger.frame >= frames_per_direction:
+            raise ValueError(
+                f"Trigger frame must be less than or equal to frames_per_direction "
+                f" (got trigger frame={trigger.frame!r}, "
+                f"frames_per_direction={frames_per_direction} "
+                f"in {record!r})"
+            )
+        try:
+            if frame_data[trigger.frame] != 0:
+                raise ValueError(
+                    f"Cannot assign a trigger {trigger!r} "
+                    f"to a frame already in use, in {record!r}"
+                )
+            frame_data[trigger.frame] = trigger.code
+        except IndexError:
+            raise ValueError(
+                f"Trigger frame must be between 0 and {len(frame_data)} "
+                f"(got {trigger.frame!r} in {record!r}"
+            ) from None
+
+    return struct.pack(
+        RECORD_FORMAT, cof_name, frames_per_direction, animation_speed, *frame_data
+    )
+
+
 RECORD_COUNT_FORMAT = "<L"
 
 
@@ -140,13 +200,25 @@ def load(file: BinaryIO) -> List[Record]:
     return loads(file.read())
 
 
-def build_hash_table(records: Iterable[Record]) -> List[List[Record]]:
-    """Creates a 'hash table' of records that can be packed later."""
+def dumps(records: Iterable[Record]) -> bytearray:
+    """Packs AnimData records into AnimData.D2 hash table format."""
     hash_table = [[] for _ in range(256)]
     for record in records:
         hash_value = hash_cof_name(record.cof_name)
         hash_table[hash_value].append(record)
-    return hash_table
+
+    packed_data = bytearray()
+    for block in hash_table:
+        packed_data += struct.pack(RECORD_COUNT_FORMAT, len(block))
+        for record in block:
+            packed_data += pack_record(record)
+
+    return packed_data
+
+
+def dump(records: Iterable[Record], file: BinaryIO) -> None:
+    """Packs AnimData records into binary format and writes them to a file."""
+    file.write(dumps(records))
 
 
 def main() -> None:
