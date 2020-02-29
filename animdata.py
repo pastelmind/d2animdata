@@ -210,12 +210,20 @@ def dump(records: Iterable[Record], file: BinaryIO) -> None:
 
 def main() -> None:
     """Entrypoint for the CLI script."""
-    ANIMDATA_D2_PATH = "AnimData-from-game.D2"
-    with open(ANIMDATA_D2_PATH, mode="rb") as animdata_d2_file:
+    animdata_d2_path = "AnimData.D2"
+    with open(animdata_d2_path, mode="rb") as animdata_d2_file:
         records = load(animdata_d2_file)
+        print(f"Opened {animdata_d2_path}, size is {animdata_d2_file.tell()} byte(s)")
 
-    print(f"Opened {ANIMDATA_D2_PATH}, size is {animdata_d2_file.tell()} byte(s)")
     print(f"Unpacked {len(records)} records")
+
+    save_path = "AnimData-save.D2"
+    with open(save_path, mode="wb") as animdata_d2_savefile:
+        dump(records, animdata_d2_savefile)
+        print(
+            f"Saved {len(records)} records to {save_path}, "
+            f"size is {animdata_d2_savefile.tell()} byte(s)"
+        )
 
 
 if __name__ == "__main__":
