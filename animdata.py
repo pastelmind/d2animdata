@@ -13,13 +13,20 @@ def hash_cof_name(cof_name: bytes) -> int:
     return sum(cof_name[: cof_name.index(b"\0")].upper()) % 256
 
 
+class ActionTrigger(NamedTuple):
+    """Represents a single action trigger frame in an AnimData record."""
+
+    frame: int
+    code: int
+
+
 class Record(NamedTuple):
     """Represents an AnimData record entry."""
 
     cof_name: bytes
     frames_per_direction: int
     animation_speed: int
-    action_frames: Tuple[Tuple[int, int], ...]
+    triggers: Tuple[ActionTrigger, ...]
 
 
 RECORD_FORMAT = "<8sLL144B"
@@ -35,21 +42,21 @@ def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
         ch == 0 for ch in cof_name[cof_name.index(b"\0") :]
     ), f"{cof_name} has non-null character after null terminator"
 
-    action_frames = []
+    triggers = []
     for frame_index, frame_code in enumerate(frame_data):
         if frame_code:
             assert frame_index < frames_per_direction, (
-                f"Action frame {frame_index}={frame_code} "
+                f"Trigger frame {frame_index}={frame_code} "
                 f"appears after end of animation (length={frames_per_direction})"
             )
-            action_frames.append((frame_index, frame_code))
+            triggers.append(ActionTrigger(frame=frame_index, code=frame_code))
 
     return (
         Record(
             cof_name=cof_name,
             frames_per_direction=frames_per_direction,
             animation_speed=animation_speed,
-            action_frames=tuple(action_frames),
+            triggers=tuple(triggers),
         ),
         struct.calcsize(RECORD_FORMAT),
     )
