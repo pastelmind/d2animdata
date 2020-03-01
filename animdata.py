@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 """Extracts and saves AnimData.D2"""
 
+import argparse
 import collections.abc
+import json
 import struct
+import sys
 from typing import BinaryIO, Iterable, List, NamedTuple, Tuple
 
 
@@ -263,23 +266,44 @@ def dump(records: Iterable[Record], file: BinaryIO) -> None:
     file.write(dumps(records))
 
 
-def main() -> None:
+def main(argv: List[str]) -> None:
     """Entrypoint for the CLI script."""
-    animdata_d2_path = "AnimData.D2"
-    with open(animdata_d2_path, mode="rb") as animdata_d2_file:
-        records = load(animdata_d2_file)
-        print(f"Opened {animdata_d2_path}, size is {animdata_d2_file.tell()} byte(s)")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    subparsers = parser.add_subparsers(dest="command")
 
-    print(f"Unpacked {len(records)} records")
+    parser_compile = subparsers.add_parser(
+        "compile", help="Compiles JSON to AnimData.D2"
+    )
+    parser_compile.add_argument("source", help="JSON file to compile")
+    parser_compile.add_argument("animdata_d2", help="AnimData.D2 file to save to")
 
-    save_path = "AnimData-save.D2"
-    with open(save_path, mode="wb") as animdata_d2_savefile:
-        dump(records, animdata_d2_savefile)
-        print(
-            f"Saved {len(records)} records to {save_path}, "
-            f"size is {animdata_d2_savefile.tell()} byte(s)"
-        )
+    parser_decompile = subparsers.add_parser(
+        "decompile", help="Deompiles AnimData.D2 to JSON"
+    )
+    parser_decompile.add_argument("animdata_d2", help="AnimData.D2 file to decompile")
+    parser_decompile.add_argument("target", help="JSON file to save to")
+
+    args = parser.parse_args(argv)
+
+    if args.command is None:
+        parser.print_help()
+    elif args.command == "compile":
+        with open(args.source) as source_file:
+            json_data = json.load(source_file)
+        records = list(map(Record.from_dict, json_data))
+        with open(args.animdata_d2, mode="wb") as animdata_d2_file:
+            dump(records, animdata_d2_file)
+    elif args.command == "decompile":
+        with open(args.animdata_d2, mode="rb") as animdata_d2_file:
+            records = load(animdata_d2_file)
+        json_data = [record.make_dict() for record in records]
+        with open(args.target, mode="w") as target_file:
+            json.dump(json_data, target_file, indent=2)
+    else:
+        raise ValueError(f"Unexpected command: {args.command!r}")
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
