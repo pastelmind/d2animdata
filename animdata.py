@@ -2,7 +2,6 @@
 """Extracts and saves AnimData.D2"""
 
 import argparse
-import collections.abc
 import csv
 import itertools
 import json
@@ -32,12 +31,12 @@ class LoadTxtError(Error):
         self.row = row
 
 
-def hash_cof_name(cof_name: bytes) -> int:
+def hash_cof_name(cof_name: str) -> int:
     """Returns the block hash for the given COF name."""
     # Based on:
     #   https://d2mods.info/forum/viewtopic.php?p=24163#p24163
     #   https://d2mods.info/forum/viewtopic.php?p=24295#p24295
-    return sum(cof_name[: cof_name.index(b"\0")].upper()) % 256
+    return sum(map(ord, cof_name.upper())) % 256
 
 
 class ActionTrigger(NamedTuple):
@@ -50,7 +49,7 @@ class ActionTrigger(NamedTuple):
 class Record(NamedTuple):
     """Represents an AnimData record entry."""
 
-    cof_name: bytes
+    cof_name: str
     frames_per_direction: int
     animation_speed: int
     triggers: Tuple[ActionTrigger, ...]
@@ -58,7 +57,7 @@ class Record(NamedTuple):
     def make_dict(self) -> dict:
         """Returns a plain dict that can be serialized to another format."""
         return {
-            "cof_name": str(self.cof_name.rstrip(b"\0"), encoding="ascii"),
+            "cof_name": self.cof_name,
             "frames_per_direction": self.frames_per_direction,
             "animation_speed": self.animation_speed,
             "triggers": [trigger._asdict() for trigger in self.triggers],
@@ -68,13 +67,8 @@ class Record(NamedTuple):
     def from_dict(cls, obj: dict) -> "Record":
         """Creates a new record from a dict unserialized from another format."""
         cof_name = obj["cof_name"]
-        if isinstance(cof_name, str):
-            cof_name = bytes(cof_name, encoding="ascii") + b"\0"
-        elif not isinstance(cof_name, (collections.abc.ByteString, memoryview)):
-            raise TypeError(
-                f"cof_name must be a string or bytes-compatible object "
-                f"(got {cof_name!r})"
-            )
+        if not isinstance(cof_name, str):
+            raise TypeError(f"cof_name must be a string (got {cof_name!r})")
 
         frames_per_direction = obj["frames_per_direction"]
         if not isinstance(frames_per_direction, int):
@@ -134,7 +128,7 @@ def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
 
     return (
         Record(
-            cof_name=cof_name,
+            cof_name=str(cof_name.split(b"\0", maxsplit=1)[0], encoding="ascii"),
             frames_per_direction=frames_per_direction,
             animation_speed=animation_speed,
             triggers=tuple(triggers),
@@ -148,16 +142,15 @@ DWORD_MAX = 0xFFFFFFFF
 
 def pack_record(record: Record) -> bytes:
     """Packs a single AnimData record."""
-    cof_name = record.cof_name
-    if len(cof_name) != 8:
+    cof_name = bytes(record.cof_name, encoding="ascii")
+    if len(cof_name) != 7:
         raise ValueError(
-            f"COF name must be 8 bytes, including the null terminator."
+            f"COF name must be exactly 7 bytes."
             f" ({cof_name!r} is {len(cof_name)} bytes long)"
         )
-    if cof_name[-1] != 0:
+    if b"\0" in cof_name:
         raise ValueError(
-            f"COF name must be terminated with a null byte. "
-            f"(found {cof_name[-1]!r} at end of {cof_name!r})"
+            f"COF name must not contain a null character. (found in {cof_name!r})"
         )
 
     frames_per_direction = record.frames_per_direction
@@ -297,7 +290,7 @@ def load_txt(file: Iterable[str]) -> List[Record]:
     records = []
     for row_num, row in enumerate(csv.DictReader(file, dialect="excel-tab")):
         try:
-            cof_name = bytes(row["CofName"], encoding="ascii") + b"\0"
+            cof_name = row["CofName"]
             frames_per_direction = int(row["FramesPerDirection"])
             animation_speed = int(row["AnimationSpeed"])
             triggers = []
@@ -332,7 +325,7 @@ def dump_txt(records: Iterable[Record], file: TextIO) -> None:
 
     for record in records:
         row = [
-            str(record.cof_name.rstrip(b"\0"), encoding="ascii"),
+            record.cof_name,
             record.frames_per_direction,
             record.animation_speed,
         ]
