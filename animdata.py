@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Extracts and saves AnimData.D2"""
 
+import collections.abc
 import struct
 from typing import BinaryIO, Iterable, List, NamedTuple, Tuple
 
@@ -27,6 +28,60 @@ class Record(NamedTuple):
     frames_per_direction: int
     animation_speed: int
     triggers: Tuple[ActionTrigger, ...]
+
+    def make_dict(self) -> dict:
+        """Returns a plain dict that can be serialized to another format."""
+        return {
+            "cof_name": str(self.cof_name.rstrip(b"\0"), encoding="ascii"),
+            "frames_per_direction": self.frames_per_direction,
+            "animation_speed": self.animation_speed,
+            "triggers": [trigger._asdict() for trigger in self.triggers],
+        }
+
+    @classmethod
+    def from_dict(cls, obj: dict) -> "Record":
+        """Creates a new record from a dict unserialized from another format."""
+        cof_name = obj["cof_name"]
+        if isinstance(cof_name, str):
+            cof_name = bytes(cof_name, encoding="ascii") + b"\0"
+        elif not isinstance(cof_name, (collections.abc.ByteString, memoryview)):
+            raise TypeError(
+                f"cof_name must be a string or bytes-compatible object "
+                f"(got {cof_name!r})"
+            )
+
+        frames_per_direction = obj["frames_per_direction"]
+        if not isinstance(frames_per_direction, int):
+            raise TypeError(
+                f"frames_per_direction must be an integer "
+                f"(got {frames_per_direction!r})"
+            )
+
+        animation_speed = obj["animation_speed"]
+        if not isinstance(animation_speed, int):
+            raise TypeError(
+                f"animation_speed must be an integer (got {animation_speed!r})"
+            )
+
+        triggers = []
+        for trigger_dict in obj["triggers"]:
+            trigger = ActionTrigger(**trigger_dict)
+            if not isinstance(trigger.frame, int):
+                raise TypeError(
+                    f"Trigger frame must be an integer (got {trigger.frame!r})"
+                )
+            if not isinstance(trigger.code, int):
+                raise TypeError(
+                    f"Trigger code must be an integer (got {trigger.code!r})"
+                )
+            triggers.append(trigger)
+
+        return cls(
+            cof_name=cof_name,
+            frames_per_direction=frames_per_direction,
+            animation_speed=animation_speed,
+            triggers=triggers,
+        )
 
 
 RECORD_FORMAT = "<8sLL144B"
