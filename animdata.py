@@ -3,11 +3,28 @@
 
 import argparse
 import collections.abc
+import csv
 import itertools
 import json
 import struct
 import sys
-from typing import BinaryIO, Iterable, List, NamedTuple, Tuple
+from typing import BinaryIO, Iterable, List, NamedTuple, Optional, TextIO, Tuple
+
+
+class Error(Exception):
+    """Base class for all errors thrown by this module."""
+
+
+class LoadTxtError(Error):
+    """Raised when loading a TXT file fails.
+
+    Attributes:
+        row: Row index that caused the failure (starts at 0).
+    """
+
+    def __init__(self, message: str, row: Optional[int] = None) -> None:
+        super().__init__(message + ("" if row is None else f" (at row index {row})"))
+        self.row = row
 
 
 def hash_cof_name(cof_name: bytes) -> int:
@@ -260,6 +277,57 @@ def dump(records: Iterable[Record], file: BinaryIO) -> None:
     file.write(dumps(records))
 
 
+def load_txt(file: Iterable[str]) -> List[Record]:
+    """Loads AnimData records from a tabbed text file."""
+    records = []
+    for row_num, row in enumerate(csv.DictReader(file, dialect="excel-tab")):
+        try:
+            cof_name = bytes(row["CofName"], encoding="ascii") + b"\0"
+            frames_per_direction = int(row["FramesPerDirection"])
+            animation_speed = int(row["AnimationSpeed"])
+            triggers = []
+            for frame in range(144):
+                code = int(row[f"FrameData{frame:03}"])
+                if code:
+                    triggers.append(ActionTrigger(frame=frame, code=code))
+            records.append(
+                Record(
+                    cof_name=cof_name,
+                    frames_per_direction=frames_per_direction,
+                    animation_speed=animation_speed,
+                    triggers=tuple(triggers),
+                )
+            )
+        except (KeyError, TypeError, ValueError, csv.Error) as err:
+            raise LoadTxtError("Failed to parse TXT file", row=row_num) from err
+    return records
+
+
+def dump_txt(records: Iterable[Record], file: TextIO) -> None:
+    """Saves AnimData records to a tabbed text file."""
+    writer = csv.writer(file, dialect="excel-tab")
+    writer.writerow(
+        [
+            "CofName",
+            "FramesPerDirection",
+            "AnimationSpeed",
+            *(f"FrameData{frame:03}" for frame in range(144)),
+        ]
+    )
+
+    for record in records:
+        row = [
+            str(record.cof_name.rstrip(b"\0"), encoding="ascii"),
+            record.frames_per_direction,
+            record.animation_speed,
+        ]
+        frame_data = [0] * 144
+        for trigger in record.triggers:
+            frame_data[trigger.frame] = trigger.code
+        row += frame_data
+        writer.writerow(row)
+
+
 def main(argv: List[str]) -> None:
     """Entrypoint for the CLI script."""
     parser = argparse.ArgumentParser(
@@ -270,7 +338,7 @@ def main(argv: List[str]) -> None:
     parser_compile = subparsers.add_parser(
         "compile", help="Compiles JSON to AnimData.D2"
     )
-    parser_compile.add_argument("source", help="JSON file to compile")
+    parser_compile.add_argument("source", help="JSON or tabbed text file to compile")
     parser_compile.add_argument("animdata_d2", help="AnimData.D2 file to save to")
     parser_compile.add_argument(
         "--sort",
@@ -278,15 +346,27 @@ def main(argv: List[str]) -> None:
         help="Sort the records alphabetically before saving",
     )
 
+    format_group = parser_compile.add_mutually_exclusive_group(required=True)
+    format_group.add_argument("--json", action="store_true", help="Compile JSON")
+    format_group.add_argument(
+        "--txt", action="store_true", help="Compile tabbed text (TXT)"
+    )
+
     parser_decompile = subparsers.add_parser(
         "decompile", help="Deompiles AnimData.D2 to JSON"
     )
     parser_decompile.add_argument("animdata_d2", help="AnimData.D2 file to decompile")
-    parser_decompile.add_argument("target", help="JSON file to save to")
+    parser_decompile.add_argument("target", help="JSON or tabbed text file to save to")
     parser_decompile.add_argument(
         "--sort",
         action="store_true",
         help="Sort the records alphabetically before saving",
+    )
+
+    format_group = parser_decompile.add_mutually_exclusive_group(required=True)
+    format_group.add_argument("--json", action="store_true", help="Decompile to JSON")
+    format_group.add_argument(
+        "--txt", action="store_true", help="Decompile to tabbed text (TXT)"
     )
 
     args = parser.parse_args(argv)
@@ -294,10 +374,16 @@ def main(argv: List[str]) -> None:
     if args.command is None:
         parser.print_help()
     elif args.command == "compile":
-        with open(args.source) as source_file:
-            json_data = json.load(source_file)
+        if args.txt:
+            with open(args.source, newline="") as source_file:
+                records = load_txt(source_file)
+        elif args.json:
+            with open(args.source) as source_file:
+                json_data = json.load(source_file)
+            records = list(map(Record.from_dict, json_data))
+        else:
+            raise ValueError("No file format specified")
 
-        records = list(map(Record.from_dict, json_data))
         if args.sort:
             sort_records_by_cof_name(records)
 
@@ -309,10 +395,16 @@ def main(argv: List[str]) -> None:
 
         if args.sort:
             sort_records_by_cof_name(records)
-        json_data = [record.make_dict() for record in records]
 
-        with open(args.target, mode="w") as target_file:
-            json.dump(json_data, target_file, indent=2)
+        if args.txt:
+            with open(args.target, mode="w", newline="") as target_file:
+                dump_txt(records, target_file)
+        elif args.json:
+            json_data = [record.make_dict() for record in records]
+            with open(args.target, mode="w") as target_file:
+                json.dump(json_data, target_file, indent=2)
+        else:
+            raise ValueError("No file format specified")
     else:
         raise ValueError(f"Unexpected command: {args.command!r}")
 
