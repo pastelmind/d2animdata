@@ -6,9 +6,14 @@ import collections.abc
 import csv
 import itertools
 import json
+import logging
 import struct
 import sys
 from typing import BinaryIO, Iterable, List, NamedTuple, Optional, TextIO, Tuple
+
+
+# Logger used by the CLI program
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Error(Exception):
@@ -203,6 +208,16 @@ def sort_records_by_cof_name(records: List[Record]) -> None:
     records.sort(key=lambda record: record.cof_name)
 
 
+def check_duplicate_cof_names(records: Iterable[Record]) -> None:
+    """Checks if the list of AnimData records contains duplicate COF names."""
+    cof_names_seen = set()
+    for record in records:
+        if record.cof_name in cof_names_seen:
+            logger.warning(f"Duplicate entry found: {record.cof_name}")
+        else:
+            cof_names_seen.add(record.cof_name)
+
+
 RECORD_COUNT_FORMAT = "<L"
 
 
@@ -330,6 +345,8 @@ def dump_txt(records: Iterable[Record], file: TextIO) -> None:
 
 def main(argv: List[str]) -> None:
     """Entrypoint for the CLI script."""
+    logging.basicConfig(format="%(levelname)s: %(message)s")
+
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -384,6 +401,7 @@ def main(argv: List[str]) -> None:
         else:
             raise ValueError("No file format specified")
 
+        check_duplicate_cof_names(records)
         if args.sort:
             sort_records_by_cof_name(records)
 
@@ -393,6 +411,7 @@ def main(argv: List[str]) -> None:
         with open(args.animdata_d2, mode="rb") as animdata_d2_file:
             records = load(animdata_d2_file)
 
+        check_duplicate_cof_names(records)
         if args.sort:
             sort_records_by_cof_name(records)
 
