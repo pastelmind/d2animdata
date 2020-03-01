@@ -107,8 +107,8 @@ class Record:
     triggers: Tuple[ActionTrigger, ...] = managed_property("_triggers")
 
     @triggers.setter
-    def triggers(self, value: Tuple[ActionTrigger, ...]) -> Tuple[ActionTrigger, ...]:
-        return value
+    def triggers(self, value: Iterable[ActionTrigger]) -> Tuple[ActionTrigger, ...]:
+        return tuple(value)
 
     def make_dict(self) -> dict:
         """Returns a plain dict that can be serialized to another format."""
@@ -182,7 +182,7 @@ def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
             cof_name=str(cof_name.split(b"\0", maxsplit=1)[0], encoding="ascii"),
             frames_per_direction=frames_per_direction,
             animation_speed=animation_speed,
-            triggers=tuple(triggers),
+            triggers=triggers,
         ),
         struct.calcsize(RECORD_FORMAT),
     )
@@ -354,7 +354,7 @@ def load_txt(file: Iterable[str]) -> List[Record]:
                     cof_name=cof_name,
                     frames_per_direction=frames_per_direction,
                     animation_speed=animation_speed,
-                    triggers=tuple(triggers),
+                    triggers=triggers,
                 )
             )
         except (KeyError, TypeError, ValueError, csv.Error) as err:
