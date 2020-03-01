@@ -3,6 +3,7 @@
 
 import argparse
 import collections.abc
+import itertools
 import json
 import struct
 import sys
@@ -180,16 +181,9 @@ def pack_record(record: Record) -> bytes:
     )
 
 
-def sort_records_by_cof_name(blocks: List[List[Record]]) -> List[Record]:
-    """Extracts a list of records from hash table blocks, sorted alphabetically
-    by COF name.
-
-    Note: This does NOT preserve the original record order in the hash table!
-    """
-    return sorted(
-        (record for records in blocks for record in records),
-        key=lambda record: record.cof_name,
-    )
+def sort_records_by_cof_name(records: List[Record]) -> None:
+    """Sorts a list of Records in place by COF name."""
+    records.sort(key=lambda record: record.cof_name)
 
 
 RECORD_COUNT_FORMAT = "<L"
@@ -203,7 +197,7 @@ def loads(data: bytes) -> List[Record]:
             Contents of AnimData.D2 in binary format.
 
     Returns:
-        List of Record objects, sorted alphabetically by COF name.
+        List of Record objects, ordered by their original order in the `data`.
     """
     blocks = []
     offset = 0
@@ -229,7 +223,7 @@ def loads(data: bytes) -> List[Record]:
         f"Blocks use {offset} bytes, but binary size is {len(data)} bytes"
     )
 
-    return sort_records_by_cof_name(blocks)
+    return list(itertools.chain.from_iterable(blocks))
 
 
 def load(file: BinaryIO) -> List[Record]:
@@ -278,12 +272,22 @@ def main(argv: List[str]) -> None:
     )
     parser_compile.add_argument("source", help="JSON file to compile")
     parser_compile.add_argument("animdata_d2", help="AnimData.D2 file to save to")
+    parser_compile.add_argument(
+        "--sort",
+        action="store_true",
+        help="Sort the records alphabetically before saving",
+    )
 
     parser_decompile = subparsers.add_parser(
         "decompile", help="Deompiles AnimData.D2 to JSON"
     )
     parser_decompile.add_argument("animdata_d2", help="AnimData.D2 file to decompile")
     parser_decompile.add_argument("target", help="JSON file to save to")
+    parser_decompile.add_argument(
+        "--sort",
+        action="store_true",
+        help="Sort the records alphabetically before saving",
+    )
 
     args = parser.parse_args(argv)
 
@@ -292,13 +296,21 @@ def main(argv: List[str]) -> None:
     elif args.command == "compile":
         with open(args.source) as source_file:
             json_data = json.load(source_file)
+
         records = list(map(Record.from_dict, json_data))
+        if args.sort:
+            sort_records_by_cof_name(records)
+
         with open(args.animdata_d2, mode="wb") as animdata_d2_file:
             dump(records, animdata_d2_file)
     elif args.command == "decompile":
         with open(args.animdata_d2, mode="rb") as animdata_d2_file:
             records = load(animdata_d2_file)
+
+        if args.sort:
+            sort_records_by_cof_name(records)
         json_data = [record.make_dict() for record in records]
+
         with open(args.target, mode="w") as target_file:
             json.dump(json_data, target_file, indent=2)
     else:
