@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """Extracts and saves AnimData.D2"""
 
+__version__ = "0.0.1a0"
+
 import argparse
 import csv
 import dataclasses
