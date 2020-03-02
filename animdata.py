@@ -344,16 +344,23 @@ def dump(records: Iterable[Record], file: BinaryIO) -> None:
 
 def load_txt(file: Iterable[str]) -> List[Record]:
     """Loads AnimData records from a tabbed text file."""
+    reader = csv.reader(file, dialect="excel-tab")
+    headers = {header: index for index, header in enumerate(next(reader))}
+    cof_name_index = headers["CofName"]
+    frames_per_direction_index = headers["FramesPerDirection"]
+    animation_speed_index = headers["AnimationSpeed"]
+    frame_data_indices = [headers[f"FrameData{frame:03}"] for frame in range(FRAME_MAX)]
+
     records = []
-    for row_num, row in enumerate(csv.DictReader(file, dialect="excel-tab")):
+    for row_num, row in enumerate(reader):
         try:
             records.append(
                 Record(
-                    cof_name=row["CofName"],
-                    frames_per_direction=int(row["FramesPerDirection"]),
-                    animation_speed=int(row["AnimationSpeed"]),
+                    cof_name=row[cof_name_index],
+                    frames_per_direction=int(row[frames_per_direction_index]),
+                    animation_speed=int(row[animation_speed_index]),
                     triggers=decode_frame_data(
-                        int(row[f"FrameData{frame:03}"]) for frame in range(FRAME_MAX)
+                        int(row[index]) for index in frame_data_indices
                     ),
                 )
             )
