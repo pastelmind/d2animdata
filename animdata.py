@@ -9,7 +9,6 @@ import json
 import logging
 import operator
 import struct
-import sys
 from typing import BinaryIO, Iterable, Iterator, List, Optional, TextIO, Tuple
 
 # Logger used by the CLI program
@@ -392,7 +391,7 @@ def dump_txt(records: Iterable[Record], file: TextIO) -> None:
         )
 
 
-def main(argv: List[str]) -> None:
+def main(argv: List[str] = None) -> None:
     """Entrypoint for the CLI script."""
     logging.basicConfig(format="%(levelname)s: %(message)s")
 
@@ -478,4 +477,4 @@ def main(argv: List[str]) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
