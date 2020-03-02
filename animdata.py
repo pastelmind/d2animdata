@@ -73,12 +73,16 @@ class ActionTrigger:
 
     @frame.setter
     def frame(self, value: int) -> int:
+        if not isinstance(value, int):
+            raise TypeError(f"frame must be an integer (got {value!r})")
         return value
 
     code: int = managed_property("_code")
 
     @code.setter
     def code(self, value: int) -> int:
+        if not isinstance(value, int):
+            raise TypeError(f"code must be an integer (got {value!r})")
         return value
 
 
@@ -90,25 +94,38 @@ class Record:
 
     @cof_name.setter
     def cof_name(self, value: str) -> str:
+        if not isinstance(value, str):
+            raise TypeError(f"cof_name must be a string (got {value!r})")
         return value
 
     frames_per_direction: int = managed_property("_frames_per_direction")
 
     @frames_per_direction.setter
     def frames_per_direction(self, value: int) -> int:
+        if not isinstance(value, int):
+            raise TypeError(f"frames_per_direction must be an integer (got {value!r})")
         return value
 
     animation_speed: int = managed_property("_animation_speed")
 
     @animation_speed.setter
     def animation_speed(self, value: int) -> int:
+        if not isinstance(value, int):
+            raise TypeError(f"animation_speed must be an integer (got {value!r})")
         return value
 
     triggers: Tuple[ActionTrigger, ...] = managed_property("_triggers")
 
     @triggers.setter
     def triggers(self, value: Iterable[ActionTrigger]) -> Tuple[ActionTrigger, ...]:
-        return tuple(value)
+        triggers = tuple(value)
+        for trigger in triggers:
+            if not isinstance(trigger, ActionTrigger):
+                raise TypeError(
+                    f"triggers must contain only ActionTrigger instances "
+                    f"(got {trigger}"
+                )
+        return triggers
 
     def make_dict(self) -> dict:
         """Returns a plain dict that can be serialized to another format."""
@@ -117,41 +134,11 @@ class Record:
     @classmethod
     def from_dict(cls, obj: dict) -> "Record":
         """Creates a new record from a dict unserialized from another format."""
-        cof_name = obj["cof_name"]
-        if not isinstance(cof_name, str):
-            raise TypeError(f"cof_name must be a string (got {cof_name!r})")
-
-        frames_per_direction = obj["frames_per_direction"]
-        if not isinstance(frames_per_direction, int):
-            raise TypeError(
-                f"frames_per_direction must be an integer "
-                f"(got {frames_per_direction!r})"
-            )
-
-        animation_speed = obj["animation_speed"]
-        if not isinstance(animation_speed, int):
-            raise TypeError(
-                f"animation_speed must be an integer (got {animation_speed!r})"
-            )
-
-        triggers = []
-        for trigger_dict in obj["triggers"]:
-            trigger = ActionTrigger(**trigger_dict)
-            if not isinstance(trigger.frame, int):
-                raise TypeError(
-                    f"Trigger frame must be an integer (got {trigger.frame!r})"
-                )
-            if not isinstance(trigger.code, int):
-                raise TypeError(
-                    f"Trigger code must be an integer (got {trigger.code!r})"
-                )
-            triggers.append(trigger)
-
         return cls(
-            cof_name=cof_name,
-            frames_per_direction=frames_per_direction,
-            animation_speed=animation_speed,
-            triggers=triggers,
+            cof_name=obj["cof_name"],
+            frames_per_direction=obj["frames_per_direction"],
+            animation_speed=obj["animation_speed"],
+            triggers=(ActionTrigger(**trigger) for trigger in obj["triggers"]),
         )
 
 
