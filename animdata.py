@@ -222,7 +222,7 @@ class Record:
         )
 
 
-RECORD_FORMAT = "<8sLL144B"
+RECORD_FORMAT = f"<8sLL{FRAME_MAX}B"
 
 
 def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
@@ -370,7 +370,7 @@ def dump_txt(records: Iterable[Record], file: TextIO) -> None:
             "CofName",
             "FramesPerDirection",
             "AnimationSpeed",
-            *(f"FrameData{frame:03}" for frame in range(144)),
+            *(f"FrameData{frame:03}" for frame in range(FRAME_MAX)),
         ]
     )
 
