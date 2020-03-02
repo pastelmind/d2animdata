@@ -10,8 +10,7 @@ import logging
 import operator
 import struct
 import sys
-from typing import BinaryIO, Iterable, List, Optional, TextIO, Tuple
-
+from typing import BinaryIO, Iterable, Iterator, List, Optional, TextIO, Tuple
 
 # Logger used by the CLI program
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -93,6 +92,23 @@ class ActionTrigger:
         if not 1 <= value <= 3:
             raise ValueError(f"code must be between 1 and 3 (got {value!r})")
         return value
+
+
+def encode_frame_data(triggers: Iterable["ActionTrigger"]) -> List[int]:
+    """Converts ActionTrigger objects to a list of codes for each frame."""
+    frame_codes = [0] * FRAME_MAX
+    for trigger in triggers:
+        frame_codes[trigger.frame] = trigger.code
+    return frame_codes
+
+
+def decode_frame_data(frame_codes: Iterable[int]) -> Iterator[ActionTrigger]:
+    """Lazily converts a list of codes for each frame to ActionTrigger objects."""
+    for frame_index, frame_code in enumerate(frame_codes):
+        if frame_index >= FRAME_MAX:
+            break
+        if frame_code:
+            yield ActionTrigger(frame=frame_index, code=frame_code)
 
 
 DWORD_MAX = 0xFFFFFFFF
@@ -215,17 +231,12 @@ def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
         RECORD_FORMAT, buffer, offset=offset
     )
 
-    triggers = []
-    for frame_index, frame_code in enumerate(frame_data):
-        if frame_code:
-            triggers.append(ActionTrigger(frame=frame_index, code=frame_code))
-
     return (
         Record(
             cof_name=str(cof_name.split(b"\0", maxsplit=1)[0], encoding="ascii"),
             frames_per_direction=frames_per_direction,
             animation_speed=animation_speed,
-            triggers=triggers,
+            triggers=decode_frame_data(frame_data),
         ),
         struct.calcsize(RECORD_FORMAT),
     )
@@ -233,16 +244,12 @@ def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
 
 def pack_record(record: Record) -> bytes:
     """Packs a single AnimData record."""
-    cof_name = bytes(record.cof_name, encoding="ascii")
-    frames_per_direction = record.frames_per_direction
-    animation_speed = record.animation_speed
-
-    frame_data = [0] * 144
-    for trigger in record.triggers:
-        frame_data[trigger.frame] = trigger.code
-
     return struct.pack(
-        RECORD_FORMAT, cof_name, frames_per_direction, animation_speed, *frame_data
+        RECORD_FORMAT,
+        bytes(record.cof_name, encoding="ascii"),
+        record.frames_per_direction,
+        record.animation_speed,
+        *encode_frame_data(record.triggers),
     )
 
 
@@ -340,20 +347,14 @@ def load_txt(file: Iterable[str]) -> List[Record]:
     records = []
     for row_num, row in enumerate(csv.DictReader(file, dialect="excel-tab")):
         try:
-            cof_name = row["CofName"]
-            frames_per_direction = int(row["FramesPerDirection"])
-            animation_speed = int(row["AnimationSpeed"])
-            triggers = []
-            for frame in range(144):
-                code = int(row[f"FrameData{frame:03}"])
-                if code:
-                    triggers.append(ActionTrigger(frame=frame, code=code))
             records.append(
                 Record(
-                    cof_name=cof_name,
-                    frames_per_direction=frames_per_direction,
-                    animation_speed=animation_speed,
-                    triggers=triggers,
+                    cof_name=row["CofName"],
+                    frames_per_direction=int(row["FramesPerDirection"]),
+                    animation_speed=int(row["AnimationSpeed"]),
+                    triggers=decode_frame_data(
+                        int(row[f"FrameData{frame:03}"]) for frame in range(FRAME_MAX)
+                    ),
                 )
             )
         except (KeyError, TypeError, ValueError, csv.Error) as err:
@@ -374,16 +375,14 @@ def dump_txt(records: Iterable[Record], file: TextIO) -> None:
     )
 
     for record in records:
-        row = [
-            record.cof_name,
-            record.frames_per_direction,
-            record.animation_speed,
-        ]
-        frame_data = [0] * 144
-        for trigger in record.triggers:
-            frame_data[trigger.frame] = trigger.code
-        row += frame_data
-        writer.writerow(row)
+        writer.writerow(
+            [
+                record.cof_name,
+                record.frames_per_direction,
+                record.animation_speed,
+                *encode_frame_data(record.triggers),
+            ]
+        )
 
 
 def main(argv: List[str]) -> None:
