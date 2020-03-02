@@ -65,6 +65,9 @@ def managed_property(private_name: str, *args, **kwargs) -> property:
     return ManagedProperty(operator.attrgetter(private_name), *args, **kwargs)
 
 
+FRAME_MAX = 144
+
+
 @dataclasses.dataclass
 class ActionTrigger:
     """Represents a single action trigger frame in an AnimData record."""
@@ -75,6 +78,10 @@ class ActionTrigger:
     def frame(self, value: int) -> int:
         if not isinstance(value, int):
             raise TypeError(f"frame must be an integer (got {value!r})")
+        if not 0 <= value < FRAME_MAX:
+            raise ValueError(
+                f"frame must be between 0 and {FRAME_MAX - 1} (got {value!r})"
+            )
         return value
 
     code: int = managed_property("_code")
@@ -83,7 +90,12 @@ class ActionTrigger:
     def code(self, value: int) -> int:
         if not isinstance(value, int):
             raise TypeError(f"code must be an integer (got {value!r})")
+        if not 1 <= value <= 3:
+            raise ValueError(f"code must be between 1 and 3 (got {value!r})")
         return value
+
+
+DWORD_MAX = 0xFFFFFFFF
 
 
 @dataclasses.dataclass
@@ -96,6 +108,15 @@ class Record:
     def cof_name(self, value: str) -> str:
         if not isinstance(value, str):
             raise TypeError(f"cof_name must be a string (got {value!r})")
+        if len(value) != 7:
+            raise ValueError(
+                f"COF name must have exactly 7 characters. "
+                f"({value!r} has {len(value)})"
+            )
+        if "\0" in value:
+            raise ValueError(
+                f"COF name must not contain a null character. (found in {value!r})"
+            )
         return value
 
     frames_per_direction: int = managed_property("_frames_per_direction")
@@ -104,6 +125,17 @@ class Record:
     def frames_per_direction(self, value: int) -> int:
         if not isinstance(value, int):
             raise TypeError(f"frames_per_direction must be an integer (got {value!r})")
+        if not 0 <= value <= DWORD_MAX:
+            raise ValueError(
+                f"frames_per_direction must be between 0 and {DWORD_MAX}."
+                f"(got {value!r})"
+            )
+        try:
+            triggers = self.triggers
+        except AttributeError:
+            pass
+        else:
+            self._check_frames(value, triggers)
         return value
 
     animation_speed: int = managed_property("_animation_speed")
@@ -112,6 +144,10 @@ class Record:
     def animation_speed(self, value: int) -> int:
         if not isinstance(value, int):
             raise TypeError(f"animation_speed must be an integer (got {value!r})")
+        if not 0 <= value <= DWORD_MAX:
+            raise ValueError(
+                f"animation_speed must be between 0 and {DWORD_MAX}. (got {value!r})"
+            )
         return value
 
     triggers: Tuple[ActionTrigger, ...] = managed_property("_triggers")
@@ -119,13 +155,41 @@ class Record:
     @triggers.setter
     def triggers(self, value: Iterable[ActionTrigger]) -> Tuple[ActionTrigger, ...]:
         triggers = tuple(value)
+
+        frames_seen = set()
         for trigger in triggers:
             if not isinstance(trigger, ActionTrigger):
                 raise TypeError(
                     f"triggers must contain only ActionTrigger instances "
                     f"(got {trigger}"
                 )
+            if trigger.frame in frames_seen:
+                raise ValueError(
+                    f"Cannot assign another trigger {trigger!r} "
+                    f"to a frame already in use."
+                )
+            frames_seen.add(trigger.frame)
+
+        try:
+            frames_per_direction = self.frames_per_direction
+        except AttributeError:
+            pass
+        else:
+            self._check_frames(frames_per_direction, triggers)
         return triggers
+
+    def _check_frames(
+        self, frames_per_direction: int, triggers: Iterable[ActionTrigger]
+    ) -> None:
+        """Checks if all trigger frames are no greater than frames_per_direction."""
+        for trigger in triggers:
+            if trigger.frame > frames_per_direction:
+                raise ValueError(
+                    f"Trigger frame must be no greater than than frames_per_direction "
+                    f"(got trigger={trigger!r}, "
+                    f"frames_per_direction={frames_per_direction} "
+                    f"for {self.cof_name!r})"
+                )
 
     def make_dict(self) -> dict:
         """Returns a plain dict that can be serialized to another format."""
@@ -151,17 +215,9 @@ def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
         RECORD_FORMAT, buffer, offset=offset
     )
 
-    assert all(
-        ch == 0 for ch in cof_name[cof_name.index(b"\0") :]
-    ), f"{cof_name} has non-null character after null terminator"
-
     triggers = []
     for frame_index, frame_code in enumerate(frame_data):
         if frame_code:
-            assert frame_index < frames_per_direction, (
-                f"Trigger frame {frame_index}={frame_code} "
-                f"appears after end of animation (length={frames_per_direction})"
-            )
             triggers.append(ActionTrigger(frame=frame_index, code=frame_code))
 
     return (
@@ -175,59 +231,15 @@ def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
     )
 
 
-DWORD_MAX = 0xFFFFFFFF
-
-
 def pack_record(record: Record) -> bytes:
     """Packs a single AnimData record."""
     cof_name = bytes(record.cof_name, encoding="ascii")
-    if len(cof_name) != 7:
-        raise ValueError(
-            f"COF name must be exactly 7 bytes."
-            f" ({cof_name!r} is {len(cof_name)} bytes long)"
-        )
-    if b"\0" in cof_name:
-        raise ValueError(
-            f"COF name must not contain a null character. (found in {cof_name!r})"
-        )
-
     frames_per_direction = record.frames_per_direction
-    if not 0 <= frames_per_direction <= DWORD_MAX:
-        raise ValueError(
-            f"frames_per_direction must be between 0 and {DWORD_MAX}."
-            f"(current value is {frames_per_direction!r})"
-        )
-
     animation_speed = record.animation_speed
-    if not 0 <= animation_speed <= DWORD_MAX:
-        raise ValueError(
-            f"animation_speed must be between 0 and {DWORD_MAX}."
-            f"(current value is {animation_speed!r})"
-        )
 
     frame_data = [0] * 144
     for trigger in record.triggers:
-        if not 1 <= trigger.code <= 3:
-            raise ValueError(f"Invalid trigger code {trigger.code!r} in {record!r}")
-        if trigger.frame >= frames_per_direction:
-            raise ValueError(
-                f"Trigger frame must be less than or equal to frames_per_direction "
-                f" (got trigger frame={trigger.frame!r}, "
-                f"frames_per_direction={frames_per_direction} "
-                f"in {record!r})"
-            )
-        try:
-            if frame_data[trigger.frame] != 0:
-                raise ValueError(
-                    f"Cannot assign a trigger {trigger!r} "
-                    f"to a frame already in use, in {record!r}"
-                )
-            frame_data[trigger.frame] = trigger.code
-        except IndexError:
-            raise ValueError(
-                f"Trigger frame must be between 0 and {len(frame_data)} "
-                f"(got {trigger.frame!r} in {record!r}"
-            ) from None
+        frame_data[trigger.frame] = trigger.code
 
     return struct.pack(
         RECORD_FORMAT, cof_name, frames_per_direction, animation_speed, *frame_data
