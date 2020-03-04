@@ -158,9 +158,7 @@ class TestDumpAnimData(unittest.TestCase):
     def test_dump(self):
         """Tests if valid Records can be correctly dumped to an AnimData.D2 file."""
         animdata_raw = self.dumps(VALID_RECORDS)
-        self.assertEqual(
-            animdata_raw, VALID_ANIMDATA, msg="Must dump AnimData.D2 correctly",
-        )
+        self.assertEqual(animdata_raw, VALID_ANIMDATA)
 
     # No need to test dumping invalid values, since Record() takes care of basic
     # value checks.
