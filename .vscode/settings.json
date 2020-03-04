@@ -6,4 +6,5 @@
     "python.jediEnabled": false,
     "python.linting.pylintEnabled": true,
     "python.pythonPath": "venv\\Scripts\\python.exe",
+    "python.testing.unittestEnabled": true,
 }
