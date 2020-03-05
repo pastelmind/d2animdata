@@ -1,0 +1,31 @@
+# This workflow will install Python dependencies and run tests.
+# Based on https://github.com/actions/starter-workflows/blob/master/ci/python-package.yml
+
+name: Build
+
+on: push
+
+jobs:
+  test:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: [3.7, 3.8]
+
+    env:
+      PIP_REQUIREMENTS: requirements-dev.txt
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install development dependencies (${{ env.PIP_REQUIREMENTS }})
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ env.PIP_REQUIREMENTS }}
+    - name: Test with tox
+      run: tox -e py
