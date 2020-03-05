@@ -14,8 +14,47 @@ env:
   PIP_REQUIREMENTS: requirements-dev.txt
 
 jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    env:
+      python-version: 3.8
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ env.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ env.python-version }}
+
+    - name: Cache dependencies
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ env.python-version }}-${{ hashFiles(env.PIP_REQUIREMENTS) }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ env.python-version }}-
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies (${{ env.PIP_REQUIREMENTS }})
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ env.PIP_REQUIREMENTS }}
+
+    # Manual build step required because tox only builds an sdist and not wheels
+    - name: Build distributions
+      run: python setup.py sdist bdist_wheel
+
+    - name: Upload distributions
+      uses: actions/upload-artifact@v1
+      with:
+        name: distributions
+        path: dist
+
   test:
 
+    needs: build
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -54,8 +93,21 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r ${{ env.PIP_REQUIREMENTS }}
-    - name: Test with tox
-      run: tox -e py
+
+    - name: Download distributions
+      uses: actions/download-artifact@v1
+      with:
+        name: distributions
+        path: dist
+
+    # Use wildcard expansion to select a single distribution file to test
+    # (requires bash)
+    - name: Test with tox (sdist)
+      run: tox -e py --installpkg dist/*.tar.gz
+      shell: bash
+    - name: Test with tox (wheel)
+      run: tox -e py --installpkg dist/*-any.whl
+      shell: bash
 
   publish:
 
@@ -63,21 +115,13 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
 
-    env:
-      python-version: 3.8
-
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ env.python-version }}
-      uses: actions/setup-python@v1
+    - name: Download distributions
+      uses: actions/download-artifact@v1
       with:
-        python-version: ${{ env.python-version }}
-    # Manual build step required because tox only builds an sdist and not wheels.
-    - name: Build distributions
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r ${{ env.PIP_REQUIREMENTS }}
-        python setup.py sdist bdist_wheel
+        name: distributions
+        path: dist
+
     - name: Publish package to TestPyPI
       # Use SHA-1 hash because this GitHub Action isn't mature yet
       # TODO: Replace hash with a tag name when this becomes stable
