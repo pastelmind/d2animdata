@@ -3,7 +3,7 @@
 import unittest
 from io import StringIO
 
-from d2animdata import ActionTrigger, LoadTxtError, Record, dump_txt, load_txt
+from d2animdata import LoadTxtError, Record, dump_txt, load_txt
 
 
 # NOTE: csv.writer() always uses '\r\n' as the line separator if the dialect is
@@ -32,21 +32,13 @@ RECORDS_VALID = [
         cof_name="00A1HTH",
         frames_per_direction=5,
         animation_speed=256,
-        triggers=[
-            ActionTrigger(frame=1, code=1),
-            ActionTrigger(frame=2, code=2),
-            ActionTrigger(frame=3, code=3),
-        ],
+        triggers={1: 1, 2: 2, 3: 3},
     ),
     Record(
         cof_name="ZZS2HTH",
         frames_per_direction=150,
         animation_speed=192,
-        triggers=[
-            ActionTrigger(frame=141, code=3),
-            ActionTrigger(frame=142, code=2),
-            ActionTrigger(frame=143, code=1),
-        ],
+        triggers={141: 3, 142: 2, 143: 1},
     ),
 ]
 

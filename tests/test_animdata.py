@@ -6,7 +6,7 @@ from io import BytesIO
 from typing import List, Iterable
 
 import d2animdata
-from d2animdata import ActionTrigger, Record
+from d2animdata import Record
 
 # Valid AnimData.D2 with 1 hash record each in the first and second blocks.
 VALID_ANIMDATA = (
@@ -41,21 +41,13 @@ VALID_RECORDS = [
         cof_name="AWS1HTH",
         frames_per_direction=9,
         animation_speed=7,
-        triggers=[
-            ActionTrigger(frame=0, code=3),
-            ActionTrigger(frame=1, code=2),
-            ActionTrigger(frame=2, code=1),
-        ],
+        triggers={0: 3, 1: 2, 2: 1},
     ),
     Record(
         cof_name="AXS1HTH",
         frames_per_direction=256,
         animation_speed=256,
-        triggers=[
-            ActionTrigger(frame=141, code=1),
-            ActionTrigger(frame=142, code=2),
-            ActionTrigger(frame=143, code=3),
-        ],
+        triggers={141: 1, 142: 2, 143: 3},
     ),
 ]
 

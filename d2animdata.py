@@ -10,8 +10,19 @@ import itertools
 import json
 import logging
 import struct
+from collections import UserDict
 from operator import attrgetter
-from typing import BinaryIO, Iterable, Iterator, List, Optional, TextIO, Tuple
+from typing import (
+    BinaryIO,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 # Logger used by the CLI program
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -63,48 +74,48 @@ class ManagedProperty(property):
 FRAME_MAX = 144
 
 
-@dataclasses.dataclass
-class ActionTrigger:
-    """Represents a single action trigger frame in an AnimData record."""
+class ActionTriggers(UserDict):
+    """Mapping of trigger frames to trigger codes.
 
-    frame: int = ManagedProperty(attrgetter("_frame"))
+    Iteration is guaranteed to be sorted by frame index in ascending order.
+    """
 
-    @frame.setter
-    def frame(self, value: int) -> int:
-        if not isinstance(value, int):
-            raise TypeError(f"frame must be an integer (got {value!r})")
-        if not 0 <= value < FRAME_MAX:
+    # pylint: disable=too-many-ancestors
+
+    def __setitem__(self, frame, code) -> None:
+        if not isinstance(frame, int):
+            raise TypeError(f"frame must be an integer (got {frame!r})")
+        if not 0 <= frame < FRAME_MAX:
             raise ValueError(
-                f"frame must be between 0 and {FRAME_MAX - 1} (got {value!r})"
+                f"frame must be between 0 and {FRAME_MAX - 1} (got {frame!r})"
             )
-        self._frame = value
 
-    code: int = ManagedProperty(attrgetter("_code"))
+        if not isinstance(code, int):
+            raise TypeError(f"code must be an integer (got {code!r})")
+        if not 1 <= code <= 3:
+            raise ValueError(f"code must be between 1 and 3 (got {code!r})")
 
-    @code.setter
-    def code(self, value: int) -> int:
-        if not isinstance(value, int):
-            raise TypeError(f"code must be an integer (got {value!r})")
-        if not 1 <= value <= 3:
-            raise ValueError(f"code must be between 1 and 3 (got {value!r})")
-        self._code = value
+        self.data[frame] = code
 
+    def __iter__(self) -> Iterator[int]:
+        return iter(sorted(self.data))
 
-def encode_frame_data(triggers: Iterable["ActionTrigger"]) -> List[int]:
-    """Converts ActionTrigger objects to a list of codes for each frame."""
-    frame_codes = [0] * FRAME_MAX
-    for trigger in triggers:
-        frame_codes[trigger.frame] = trigger.code
-    return frame_codes
+    def to_codes(self) -> Iterable[int]:
+        """Yields a frame codes for each frame in order."""
+        for frame in range(FRAME_MAX):
+            yield self.get(frame, 0)
 
-
-def decode_frame_data(frame_codes: Iterable[int]) -> Iterator[ActionTrigger]:
-    """Lazily converts a list of codes for each frame to ActionTrigger objects."""
-    for frame_index, frame_code in enumerate(frame_codes):
-        if frame_index >= FRAME_MAX:
-            break
-        if frame_code:
-            yield ActionTrigger(frame=frame_index, code=frame_code)
+    @classmethod
+    def from_codes(cls, frame_codes: Iterable[int]) -> "ActionTriggers":
+        """Creates an ActionTriggers object from an iterable of codes for each
+        frame."""
+        obj = cls()
+        for frame, code in enumerate(frame_codes):
+            if frame >= FRAME_MAX:
+                break
+            if code:
+                obj[frame] = code
+        return obj
 
 
 DWORD_MAX = 0xFFFFFFFF
@@ -162,25 +173,13 @@ class Record:
             )
         self._animation_speed = value
 
-    triggers: Tuple[ActionTrigger, ...] = ManagedProperty(attrgetter("_triggers"))
+    triggers: ActionTriggers = ManagedProperty(attrgetter("_triggers"))
 
     @triggers.setter
-    def triggers(self, value: Iterable[ActionTrigger]) -> Tuple[ActionTrigger, ...]:
-        triggers = tuple(value)
-
-        frames_seen = set()
-        for trigger in triggers:
-            if not isinstance(trigger, ActionTrigger):
-                raise TypeError(
-                    f"triggers must contain only ActionTrigger instances "
-                    f"(got {trigger}"
-                )
-            if trigger.frame in frames_seen:
-                raise ValueError(
-                    f"Cannot assign another trigger {trigger!r} "
-                    f"to a frame already in use."
-                )
-            frames_seen.add(trigger.frame)
+    def triggers(
+        self, value: Union[Iterable[Tuple[int, int]], Mapping[int, int]]
+    ) -> ActionTriggers:
+        triggers = ActionTriggers(value)
 
         try:
             frames_per_direction = self.frames_per_direction
@@ -191,30 +190,37 @@ class Record:
         self._triggers = triggers
 
     def _check_frames(
-        self, frames_per_direction: int, triggers: Iterable[ActionTrigger]
+        self, frames_per_direction: int, triggers: ActionTriggers
     ) -> None:
         """Checks if all trigger frames are no greater than frames_per_direction."""
-        for trigger in triggers:
-            if trigger.frame > frames_per_direction:
+        for frame, code in triggers.items():
+            if frame > frames_per_direction:
                 raise ValueError(
                     f"Trigger frame must be no greater than than frames_per_direction "
-                    f"(got trigger={trigger!r}, "
+                    f"(got trigger frame={frame!r}, code={code!r}, "
                     f"frames_per_direction={frames_per_direction} "
                     f"for {self.cof_name!r})"
                 )
 
     def make_dict(self) -> dict:
         """Returns a plain dict that can be serialized to another format."""
-        return dataclasses.asdict(self)
+        self_dict = dataclasses.asdict(self)
+        self_dict["triggers"] = dict(self_dict["triggers"])
+        return self_dict
 
     @classmethod
     def from_dict(cls, obj: dict) -> "Record":
-        """Creates a new record from a dict unserialized from another format."""
+        """Creates a new record from a dict unserialized from another format.
+
+        Trigger frame indices are automatically converted to integers in order
+        to support data formats that do not support integer mapping keys
+        (e.g. JSON).
+        """
         return cls(
             cof_name=obj["cof_name"],
             frames_per_direction=obj["frames_per_direction"],
             animation_speed=obj["animation_speed"],
-            triggers=(ActionTrigger(**trigger) for trigger in obj["triggers"]),
+            triggers={int(frame): code for frame, code in obj["triggers"].items()},
         )
 
 
@@ -232,7 +238,7 @@ def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
             cof_name=str(cof_name.split(b"\0", maxsplit=1)[0], encoding="ascii"),
             frames_per_direction=frames_per_direction,
             animation_speed=animation_speed,
-            triggers=decode_frame_data(frame_data),
+            triggers=ActionTriggers.from_codes(frame_data),
         ),
         struct.calcsize(RECORD_FORMAT),
     )
@@ -245,7 +251,7 @@ def pack_record(record: Record) -> bytes:
         bytes(record.cof_name, encoding="ascii"),
         record.frames_per_direction,
         record.animation_speed,
-        *encode_frame_data(record.triggers),
+        *record.triggers.to_codes(),
     )
 
 
@@ -355,7 +361,7 @@ def load_txt(file: Iterable[str]) -> List[Record]:
                     cof_name=row[cof_name_index],
                     frames_per_direction=int(row[frames_per_direction_index]),
                     animation_speed=int(row[animation_speed_index]),
-                    triggers=decode_frame_data(
+                    triggers=ActionTriggers.from_codes(
                         int(row[index]) for index in frame_data_indices
                     ),
                 )
@@ -383,7 +389,7 @@ def dump_txt(records: Iterable[Record], file: TextIO) -> None:
                 record.cof_name,
                 record.frames_per_direction,
                 record.animation_speed,
-                *encode_frame_data(record.triggers),
+                *record.triggers.to_codes(),
             ]
         )
 

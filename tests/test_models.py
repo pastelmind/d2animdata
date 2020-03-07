@@ -2,7 +2,7 @@
 
 import unittest
 
-from d2animdata import ActionTrigger, Record
+from d2animdata import ActionTriggers, Record
 
 
 class TestRecord(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestRecord(unittest.TestCase):
             cof_name="AAA1HTH",
             frames_per_direction=100,
             animation_speed=256,
-            triggers=[ActionTrigger(frame=5, code=1)],
+            triggers={5: 1, 6: 2},
         )
 
     def test_valid_init(self) -> None:
@@ -24,10 +24,7 @@ class TestRecord(unittest.TestCase):
         # Large numbers are OK if they fit within unsigned 32-bit
         self.record.frames_per_direction = 0xFFFFFFFF
         self.record.animation_speed = 0xFFFFFFFF
-        self.record.triggers = [
-            ActionTrigger(frame=0, code=1),
-            ActionTrigger(frame=1, code=2),
-        ]
+        self.record.triggers = {0: 1, 1: 2}
 
     def test_invalid_cof_name_type(self) -> None:
         """Tests if cof_name rejects invalid types."""
@@ -72,7 +69,7 @@ class TestRecord(unittest.TestCase):
     def test_invalid_frames_per_direction_less_than_trigger_frame(self) -> None:
         """Tests if frames_per_direction rejects values smaller than the maximum
         trigger frame."""
-        self.record.triggers = [ActionTrigger(frame=20, code=1)]
+        self.record.triggers = {20: 1}
         with self.assertRaises(ValueError):
             self.record.frames_per_direction = 12
 
@@ -95,25 +92,11 @@ class TestRecord(unittest.TestCase):
             self.record.animation_speed = 0xFFFFFFFF + 1
 
     def test_invalid_triggers_type(self) -> None:
-        """Tests if triggers only accepts sequences of ActionTriggers."""
-        for bad_value in [None, 1, "string", {}, []]:
+        """Tests if triggers rejects values that are not valid mappings."""
+        for bad_value in [1, "string", [0]]:
             with self.subTest(bad_value=bad_value):
-                with self.assertRaises(
-                    TypeError,
-                    msg="Must accept only sequences containing ActionTriggers",
-                ):
-                    self.record.triggers = [bad_value]
-
-    def test_invalid_triggers_duplicate_frame(self) -> None:
-        """Tests if triggers rejects when two ActionTriggers attempt to use the
-        same frame."""
-        # Prevent the next code from throwing because of frames_per_direction
-        self.record.frames_per_direction = 100
-        with self.assertRaises(ValueError):
-            self.record.triggers = [
-                ActionTrigger(frame=5, code=1),
-                ActionTrigger(frame=5, code=2),
-            ]
+                with self.assertRaises((TypeError, ValueError)):
+                    self.record.triggers = bad_value
 
     def test_invalid_triggers_greater_than_trigger_frame(self) -> None:
         """Tests if triggers rejects when a trigger's frame is greater than
@@ -121,7 +104,7 @@ class TestRecord(unittest.TestCase):
         self.record.triggers = []
         self.record.frames_per_direction = 0
         with self.assertRaises(ValueError):
-            self.record.triggers = [ActionTrigger(frame=1000, code=1)]
+            self.record.triggers = {1000: 1}
 
     def test_make_dict(self) -> None:
         """Tests if a valid Record can be converted to a plain dict."""
@@ -131,7 +114,7 @@ class TestRecord(unittest.TestCase):
                 "cof_name": "AAA1HTH",
                 "frames_per_direction": 100,
                 "animation_speed": 256,
-                "triggers": ({"frame": 5, "code": 1},),
+                "triggers": {5: 1, 6: 2},
             },
         )
 
@@ -143,57 +126,50 @@ class TestRecord(unittest.TestCase):
                     "cof_name": "AAA1HTH",
                     "frames_per_direction": 100,
                     "animation_speed": 256,
-                    "triggers": ({"frame": 5, "code": 1},),
+                    "triggers": {5: 1, "6": 2},
                 }
             ),
             self.record,
         )
 
 
-class TestActionTrigger(unittest.TestCase):
-    """Test case for the d2animdata.ActionTrigger class."""
-
-    def setUp(self) -> None:
-        """Setup for tests that manipulate already-created objects."""
-        # This will fail if the constructor fails to accept valid values.
-        self.trigger = ActionTrigger(frame=1, code=1)
+class TestActionTriggers(unittest.TestCase):
+    """Test case for the d2animdata.ActionTriggers class."""
 
     def test_valid_init(self) -> None:
-        """Tests if a ActionTrigger object accepts valid attribute values."""
-        self.trigger.frame = 5
-        self.trigger.code = 1
-        self.trigger.code = 2
-        self.trigger.code = 3
+        """Tests if an ActionTriggers object accepts valid frames and codes."""
+        # pylint: disable=no-self-use
+        ActionTriggers({5: 1, 6: 2, 7: 3})
 
     def test_invalid_frame_type(self) -> None:
-        """Tests if ActionTrigger.frame rejects invalid types."""
+        """Tests if ActionTriggers rejects invalid frame types."""
         for bad_value in [None, 1.1, "1"]:
             with self.subTest(bad_value=bad_value):
                 with self.assertRaises(TypeError, msg="Must accept only integers"):
-                    self.trigger.frame = bad_value
+                    ActionTriggers({bad_value: 1})
 
     def test_invalid_frame_negative(self) -> None:
-        """Tests if ActionTrigger.frame rejects negative values."""
+        """Tests if ActionTriggers rejects negative frame values."""
         with self.assertRaises(ValueError):
-            self.trigger.frame = -1
+            ActionTriggers({-1: 1})
 
     def test_invalid_frame_too_big(self) -> None:
-        """Tests if ActionTrigger.frame rejects values bigger than the allowed
+        """Tests if ActionTriggers rejects frame values bigger than the allowed
         maximum."""
         with self.assertRaises(ValueError):
-            self.trigger.frame = 144
+            ActionTriggers({144: 1})
 
     def test_invalid_code_type(self) -> None:
-        """Tests if ActionTrigger.code rejects invalid types."""
+        """Tests if ActionTriggers rejects invalid code types."""
         for bad_value in [None, 1.1, "1"]:
             with self.subTest(bad_value=bad_value):
                 with self.assertRaises(TypeError, msg="Must accept only integers"):
-                    self.trigger.code = bad_value
+                    ActionTriggers({0: bad_value})
 
     def test_invalid_code_value(self) -> None:
-        """Tests if ActionTrigger.code rejects values outside the allowed range
+        """Tests if ActionTriggers rejects code values outside the allowed range
         (1 <= code <= 3)."""
         for bad_value in [-1, -100, 4, 5, 1000]:
             with self.subTest(bad_value=bad_value):
                 with self.assertRaises(ValueError):
-                    self.trigger.code = bad_value
+                    ActionTriggers({0: bad_value})
