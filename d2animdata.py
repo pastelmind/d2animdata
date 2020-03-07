@@ -9,8 +9,8 @@ import dataclasses
 import itertools
 import json
 import logging
-import operator
 import struct
+from operator import attrgetter
 from typing import BinaryIO, Iterable, Iterator, List, Optional, TextIO, Tuple
 
 # Logger used by the CLI program
@@ -43,26 +43,21 @@ def hash_cof_name(cof_name: str) -> int:
 
 # Loosely inspired by:
 #   https://florimond.dev/blog/articles/2018/10/reconciling-dataclasses-and-properties-in-python/
-def managed_property(private_name: str, *args, **kwargs) -> property:
-    """Creates a managed public property backed by a private property."""
+class ManagedProperty(property):
+    """Managed, required property for use with dataclasses."""
 
-    class ManagedProperty(property):
-        """Managed property attribute that is compatible with dataclasses."""
+    def __set_name__(self, owner, property_name: str) -> None:
+        # pylint: disable=attribute-defined-outside-init
+        self.property_name = property_name
 
-        def __set_name__(self, owner, property_name: str) -> None:
-            # pylint: disable=attribute-defined-outside-init
-            self.property_name = property_name
-
-        def __set__(self, obj, value) -> None:
-            # Check if the __init__() of a dataclass is passing the property
-            # itself as the "default" value.
-            if value is self:
-                raise TypeError(f"Missing value for property {self.property_name!r}")
-            if self.fset is None:
-                raise AttributeError(f"can't set attribute {self.property_name!r}")
-            setattr(obj, private_name, self.fset(obj, value))
-
-    return ManagedProperty(operator.attrgetter(private_name), *args, **kwargs)
+    def __set__(self, obj, value) -> None:
+        # Check if the __init__() of a dataclass is passing the property
+        # itself as the "default" value.
+        # This occurs when a dataclass is instantiated without providing a value
+        # for this property.
+        if value is self:
+            raise TypeError(f"Missing value for property {self.property_name!r}")
+        super().__set__(obj, value)
 
 
 FRAME_MAX = 144
@@ -72,7 +67,7 @@ FRAME_MAX = 144
 class ActionTrigger:
     """Represents a single action trigger frame in an AnimData record."""
 
-    frame: int = managed_property("_frame")
+    frame: int = ManagedProperty(attrgetter("_frame"))
 
     @frame.setter
     def frame(self, value: int) -> int:
@@ -82,9 +77,9 @@ class ActionTrigger:
             raise ValueError(
                 f"frame must be between 0 and {FRAME_MAX - 1} (got {value!r})"
             )
-        return value
+        self._frame = value
 
-    code: int = managed_property("_code")
+    code: int = ManagedProperty(attrgetter("_code"))
 
     @code.setter
     def code(self, value: int) -> int:
@@ -92,7 +87,7 @@ class ActionTrigger:
             raise TypeError(f"code must be an integer (got {value!r})")
         if not 1 <= value <= 3:
             raise ValueError(f"code must be between 1 and 3 (got {value!r})")
-        return value
+        self._code = value
 
 
 def encode_frame_data(triggers: Iterable["ActionTrigger"]) -> List[int]:
@@ -119,7 +114,7 @@ DWORD_MAX = 0xFFFFFFFF
 class Record:
     """Represents an AnimData record entry."""
 
-    cof_name: str = managed_property("_cof_name")
+    cof_name: str = ManagedProperty(attrgetter("_cof_name"))
 
     @cof_name.setter
     def cof_name(self, value: str) -> str:
@@ -134,9 +129,9 @@ class Record:
             raise ValueError(
                 f"COF name must not contain a null character. (found in {value!r})"
             )
-        return value
+        self._cof_name = value
 
-    frames_per_direction: int = managed_property("_frames_per_direction")
+    frames_per_direction: int = ManagedProperty(attrgetter("_frames_per_direction"))
 
     @frames_per_direction.setter
     def frames_per_direction(self, value: int) -> int:
@@ -153,9 +148,9 @@ class Record:
             pass
         else:
             self._check_frames(value, triggers)
-        return value
+        self._frames_per_direction = value
 
-    animation_speed: int = managed_property("_animation_speed")
+    animation_speed: int = ManagedProperty(attrgetter("_animation_speed"))
 
     @animation_speed.setter
     def animation_speed(self, value: int) -> int:
@@ -165,9 +160,9 @@ class Record:
             raise ValueError(
                 f"animation_speed must be between 0 and {DWORD_MAX}. (got {value!r})"
             )
-        return value
+        self._animation_speed = value
 
-    triggers: Tuple[ActionTrigger, ...] = managed_property("_triggers")
+    triggers: Tuple[ActionTrigger, ...] = ManagedProperty(attrgetter("_triggers"))
 
     @triggers.setter
     def triggers(self, value: Iterable[ActionTrigger]) -> Tuple[ActionTrigger, ...]:
@@ -193,7 +188,7 @@ class Record:
             pass
         else:
             self._check_frames(frames_per_direction, triggers)
-        return triggers
+        self._triggers = triggers
 
     def _check_frames(
         self, frames_per_direction: int, triggers: Iterable[ActionTrigger]
