@@ -12,14 +12,13 @@ on:
 
 env:
   PIP_REQUIREMENTS: requirements-dev.txt
+  # Default Python version for running build and lint jobs
+  python-version: 3.8
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
-
-    env:
-      python-version: 3.8
 
     steps:
     - uses: actions/checkout@v2
@@ -51,6 +50,49 @@ jobs:
       with:
         name: distributions
         path: dist
+
+  lint:
+
+    runs-on: ubuntu-latest
+    # Use the build matrix to reuse steps across lint jobs
+    # TODO: Separate this into individual jobs when GitHub Actions gain support
+    # for YAML aliases and anchors.
+    strategy:
+      matrix:
+        lint-tool: [black, isort, pylint]
+        include:
+          - lint-tool: black
+            run: black --check .
+          - lint-tool: isort
+            run: isort --check-only
+          - lint-tool: pylint
+            run: pylint *.py tests
+      # Make all lint jobs run to completion for combined diagnosis
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ env.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ env.python-version }}
+
+    - name: Cache dependencies
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ env.python-version }}-${{ hashFiles(env.PIP_REQUIREMENTS) }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ env.python-version }}-
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies (${{ env.PIP_REQUIREMENTS }})
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ env.PIP_REQUIREMENTS }}
+
+    - name: Run ${{ matrix.lint-tool }}
+      run: ${{ matrix.run }}
 
   test:
 
@@ -111,7 +153,9 @@ jobs:
 
   publish:
 
-    needs: test
+    needs:
+      - lint
+      - test
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
 
