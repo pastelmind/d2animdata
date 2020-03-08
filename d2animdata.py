@@ -153,12 +153,6 @@ class Record:
                 f"frames_per_direction must be between 0 and {DWORD_MAX}."
                 f"(got {value!r})"
             )
-        try:
-            triggers = self.triggers
-        except AttributeError:
-            pass
-        else:
-            self._check_frames(value, triggers)
         self._frames_per_direction = value
 
     animation_speed: int = ManagedProperty(attrgetter("_animation_speed"))
@@ -179,28 +173,7 @@ class Record:
     def triggers(
         self, value: Union[Iterable[Tuple[int, int]], Mapping[int, int]]
     ) -> ActionTriggers:
-        triggers = ActionTriggers(value)
-
-        try:
-            frames_per_direction = self.frames_per_direction
-        except AttributeError:
-            pass
-        else:
-            self._check_frames(frames_per_direction, triggers)
-        self._triggers = triggers
-
-    def _check_frames(
-        self, frames_per_direction: int, triggers: ActionTriggers
-    ) -> None:
-        """Checks if all trigger frames are no greater than frames_per_direction."""
-        for frame, code in triggers.items():
-            if frame > frames_per_direction:
-                raise ValueError(
-                    f"Trigger frame must be no greater than than frames_per_direction "
-                    f"(got trigger frame={frame!r}, code={code!r}, "
-                    f"frames_per_direction={frames_per_direction} "
-                    f"for {self.cof_name!r})"
-                )
+        self._triggers = ActionTriggers(value)
 
     def make_dict(self) -> dict:
         """Returns a plain dict that can be serialized to another format."""
@@ -268,6 +241,22 @@ def check_duplicate_cof_names(records: Iterable[Record]) -> None:
             logger.warning(f"Duplicate entry found: {record.cof_name}")
         else:
             cof_names_seen.add(record.cof_name)
+
+
+def check_out_of_bounds_triggers(record: Record) -> None:
+    """Warns if a record has any out-of-bound trigger frames.
+
+    A trigger frame is out-of-bounds if its frame index is same or greater than
+    the record's frames_per_direction. The game might never reach such a frame,
+    making the trigger useless.
+    """
+    for frame in record.triggers:
+        if frame >= record.frames_per_direction:
+            logger.warning(
+                f"Record {record.cof_name}: trigger frame {frame!r} may have "
+                f"no effect because it is same or greater than "
+                f"frames_per_direction ({record.frames_per_direction!r})"
+            )
 
 
 RECORD_COUNT_FORMAT = "<L"
@@ -453,6 +442,8 @@ def main(argv: List[str] = None) -> None:
             raise ValueError("No file format specified")
 
         check_duplicate_cof_names(records)
+        for record in records:
+            check_out_of_bounds_triggers(record)
         if args.sort:
             sort_records_by_cof_name(records)
 
@@ -463,6 +454,8 @@ def main(argv: List[str] = None) -> None:
             records = load(animdata_d2_file)
 
         check_duplicate_cof_names(records)
+        for record in records:
+            check_out_of_bounds_triggers(record)
         if args.sort:
             sort_records_by_cof_name(records)
 

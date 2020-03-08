@@ -66,13 +66,6 @@ class TestRecord(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.record.frames_per_direction = 0xFFFFFFFF + 1
 
-    def test_invalid_frames_per_direction_less_than_trigger_frame(self) -> None:
-        """Tests if frames_per_direction rejects values smaller than the maximum
-        trigger frame."""
-        self.record.triggers = {20: 1}
-        with self.assertRaises(ValueError):
-            self.record.frames_per_direction = 12
-
     def test_invalid_animation_speed_type(self) -> None:
         """Tests if animation_speed rejects invalid types."""
         for bad_value in [None, 1.1, "1"]:
