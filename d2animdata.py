@@ -32,6 +32,29 @@ class Error(Exception):
     """Base class for all errors thrown by this module."""
 
 
+@dataclasses.dataclass(eq=False)
+class AnimDataError(Error):
+    """Malformed or corrupted AnimData.D2.
+
+    Attributes:
+        message:
+            Explanation of the error.
+        offset:
+            Offset of the byte that caused the failure.
+    """
+
+    message: str
+    offset: Optional[int] = None
+
+    def __str__(self) -> str:
+        fields = ", ".join(
+            f"{name}={value!r}"
+            for name, value in vars(self).items()
+            if value is not None and name != "message"
+        )
+        return self.message + (f" ({fields})" if fields else "")
+
+
 class LoadTxtError(Error):
     """Raised when loading a TXT file fails.
 
@@ -204,19 +227,30 @@ RECORD_FORMAT = f"<8sLL{FRAME_MAX}B"
 
 def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
     """Unpacks a single AnimData record from the `buffer` at `offset`."""
-    (cof_name, frames_per_direction, animation_speed, *frame_data) = struct.unpack_from(
-        RECORD_FORMAT, buffer, offset=offset
-    )
+    try:
+        (
+            cof_name,
+            frames_per_direction,
+            animation_speed,
+            *frame_data,
+        ) = struct.unpack_from(RECORD_FORMAT, buffer, offset=offset)
+    except struct.error as error:
+        raise AnimDataError(f"Cannot unpack record", offset=offset) from error
 
-    return (
-        Record(
-            cof_name=str(cof_name.split(b"\0", maxsplit=1)[0], encoding="ascii"),
-            frames_per_direction=frames_per_direction,
-            animation_speed=animation_speed,
-            triggers=ActionTriggers.from_codes(frame_data),
-        ),
-        struct.calcsize(RECORD_FORMAT),
-    )
+    try:
+        # Assuming that RECORD_FORMAT is correct, all arguments for Record()
+        # should be correctly typed. Thus, Record() will only raise ValueError.
+        return (
+            Record(
+                cof_name=str(cof_name.split(b"\0", maxsplit=1)[0], encoding="ascii"),
+                frames_per_direction=frames_per_direction,
+                animation_speed=animation_speed,
+                triggers=ActionTriggers.from_codes(frame_data),
+            ),
+            struct.calcsize(RECORD_FORMAT),
+        )
+    except ValueError as error:
+        raise AnimDataError("Invalid record field", offset=offset) from error
 
 
 def pack_record(record: Record) -> bytes:
@@ -277,26 +311,37 @@ def loads(data: bytes) -> List[Record]:
     blocks = []
     offset = 0
     for block_index in range(256):
-        (record_count,) = struct.unpack_from(RECORD_COUNT_FORMAT, data, offset=offset)
+        try:
+            (record_count,) = struct.unpack_from(
+                RECORD_COUNT_FORMAT, data, offset=offset
+            )
+        except struct.error as err:
+            raise AnimDataError(
+                f"Cannot unpack record count for block {block_index!r}", offset=offset
+            ) from err
         offset += struct.calcsize(RECORD_COUNT_FORMAT)
 
         records = []
         for _ in range(record_count):
             record, record_size = unpack_record(data, offset=offset)
             hash_value = hash_cof_name(record.cof_name)
-            assert block_index == hash_value, (
-                f"Incorrect hash (COF name={record.cof_name}): "
-                f"expected {block_index} but got {hash_value}"
-            )
+            if block_index != hash_value:
+                raise AnimDataError(
+                    f"Incorrect hash (COF name={record.cof_name!r}): "
+                    f"expected {block_index} but got {hash_value}",
+                    offset=offset,
+                )
             records.append(record)
             offset += record_size
 
         blocks.append(records)
 
-    assert offset == len(data), (
-        f"Data size mismatch: "
-        f"Blocks use {offset} bytes, but binary size is {len(data)} bytes"
-    )
+    if offset != len(data):
+        raise AnimDataError(
+            f"Data size mismatch: "
+            f"Blocks use {offset} bytes, but binary size is {len(data)} bytes",
+            offset=offset,
+        )
 
     return list(itertools.chain.from_iterable(blocks))
 

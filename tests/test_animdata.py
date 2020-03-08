@@ -1,12 +1,11 @@
 """Unit tests for loading and saving AnimData.D2 files."""
 
-import struct
 import unittest
 from io import BytesIO
 from typing import List, Iterable
 
 import d2animdata
-from d2animdata import Record
+from d2animdata import AnimDataError, Record
 
 from .valid_data import VALID_ANIMDATA, VALID_RECORDS
 
@@ -63,26 +62,23 @@ class TestLoadAnimData(unittest.TestCase):
 
     def test_empty(self) -> None:
         """Tests if loading an empty file fails."""
-        with self.assertRaises(struct.error):
+        with self.assertRaises(AnimDataError):
             self.loads(b"")
 
     def test_hash_mismatch(self) -> None:
         """Tests if loading fails when a record's hash does not match the index
         of its containing block."""
-        # TODO: Use a custom error class
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(AnimDataError):
             self.loads(ANIMDATA_BAD_HASH)
 
     def test_bad_record_count(self) -> None:
         """Tests if loading fails when a block's record count is invalid."""
-        # TODO: Use a custom error class
-        with self.assertRaises((ValueError, struct.error)):
+        with self.assertRaises(AnimDataError):
             self.loads(ANIMDATA_BAD_RECORD_COUNT)
 
     def test_extra_data(self) -> None:
         """Tests if loading fails when the file contains extra bytes."""
-        # TODO: Use a warning instead
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(AnimDataError):
             self.loads(ANIMDATA_EXTRA_DATA)
 
 
