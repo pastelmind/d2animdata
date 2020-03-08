@@ -383,6 +383,84 @@ def dump_txt(records: Iterable[Record], file: TextIO) -> None:
         )
 
 
+def init_subparser_compile(parser: argparse.ArgumentParser) -> None:
+    """Initialize the argument subparser for the `compile` command."""
+    parser.add_argument("source", help="JSON or tabbed text file to compile")
+    parser.add_argument("animdata_d2", help="AnimData.D2 file to save to")
+    parser.add_argument(
+        "--sort",
+        action="store_true",
+        help="Sort the records alphabetically before saving",
+    )
+
+    format_group = parser.add_mutually_exclusive_group(required=True)
+    format_group.add_argument("--json", action="store_true", help="Compile JSON")
+    format_group.add_argument(
+        "--txt", action="store_true", help="Compile tabbed text (TXT)"
+    )
+
+
+def cli_compile(args: argparse.Namespace) -> None:
+    """Handles the `compile` command."""
+    if args.txt:
+        with open(args.source, newline="") as source_file:
+            records = load_txt(source_file)
+    elif args.json:
+        with open(args.source) as source_file:
+            json_data = json.load(source_file)
+        records = list(map(Record.from_dict, json_data))
+    else:
+        raise ValueError("No file format specified")
+
+    check_duplicate_cof_names(records)
+    for record in records:
+        check_out_of_bounds_triggers(record)
+    if args.sort:
+        sort_records_by_cof_name(records)
+
+    with open(args.animdata_d2, mode="wb") as animdata_d2_file:
+        dump(records, animdata_d2_file)
+
+
+def init_subparser_decompile(parser: argparse.ArgumentParser) -> None:
+    """Initialize the argument subparser for the `decompile` command."""
+    parser.add_argument("animdata_d2", help="AnimData.D2 file to decompile")
+    parser.add_argument("target", help="JSON or tabbed text file to save to")
+    parser.add_argument(
+        "--sort",
+        action="store_true",
+        help="Sort the records alphabetically before saving",
+    )
+
+    format_group = parser.add_mutually_exclusive_group(required=True)
+    format_group.add_argument("--json", action="store_true", help="Decompile to JSON")
+    format_group.add_argument(
+        "--txt", action="store_true", help="Decompile to tabbed text (TXT)"
+    )
+
+
+def cli_decompile(args: argparse.Namespace):
+    """Handles the `decompile` command."""
+    with open(args.animdata_d2, mode="rb") as animdata_d2_file:
+        records = load(animdata_d2_file)
+
+    check_duplicate_cof_names(records)
+    for record in records:
+        check_out_of_bounds_triggers(record)
+    if args.sort:
+        sort_records_by_cof_name(records)
+
+    if args.txt:
+        with open(args.target, mode="w", newline="") as target_file:
+            dump_txt(records, target_file)
+    elif args.json:
+        json_data = [record.make_dict() for record in records]
+        with open(args.target, mode="w") as target_file:
+            json.dump(json_data, target_file, indent=2)
+    else:
+        raise ValueError("No file format specified")
+
+
 def main(argv: List[str] = None) -> None:
     """Entrypoint for the CLI script."""
     logging.basicConfig(format="%(levelname)s: %(message)s")
@@ -392,38 +470,11 @@ def main(argv: List[str] = None) -> None:
     )
     subparsers = parser.add_subparsers(dest="command")
 
-    parser_compile = subparsers.add_parser(
-        "compile", help="Compiles JSON to AnimData.D2"
+    init_subparser_compile(
+        subparsers.add_parser("compile", help="Compiles JSON to AnimData.D2")
     )
-    parser_compile.add_argument("source", help="JSON or tabbed text file to compile")
-    parser_compile.add_argument("animdata_d2", help="AnimData.D2 file to save to")
-    parser_compile.add_argument(
-        "--sort",
-        action="store_true",
-        help="Sort the records alphabetically before saving",
-    )
-
-    format_group = parser_compile.add_mutually_exclusive_group(required=True)
-    format_group.add_argument("--json", action="store_true", help="Compile JSON")
-    format_group.add_argument(
-        "--txt", action="store_true", help="Compile tabbed text (TXT)"
-    )
-
-    parser_decompile = subparsers.add_parser(
-        "decompile", help="Deompiles AnimData.D2 to JSON"
-    )
-    parser_decompile.add_argument("animdata_d2", help="AnimData.D2 file to decompile")
-    parser_decompile.add_argument("target", help="JSON or tabbed text file to save to")
-    parser_decompile.add_argument(
-        "--sort",
-        action="store_true",
-        help="Sort the records alphabetically before saving",
-    )
-
-    format_group = parser_decompile.add_mutually_exclusive_group(required=True)
-    format_group.add_argument("--json", action="store_true", help="Decompile to JSON")
-    format_group.add_argument(
-        "--txt", action="store_true", help="Decompile to tabbed text (TXT)"
+    init_subparser_decompile(
+        subparsers.add_parser("decompile", help="Deompiles AnimData.D2 to JSON")
     )
 
     args = parser.parse_args(argv)
@@ -431,43 +482,9 @@ def main(argv: List[str] = None) -> None:
     if args.command is None:
         parser.print_help()
     elif args.command == "compile":
-        if args.txt:
-            with open(args.source, newline="") as source_file:
-                records = load_txt(source_file)
-        elif args.json:
-            with open(args.source) as source_file:
-                json_data = json.load(source_file)
-            records = list(map(Record.from_dict, json_data))
-        else:
-            raise ValueError("No file format specified")
-
-        check_duplicate_cof_names(records)
-        for record in records:
-            check_out_of_bounds_triggers(record)
-        if args.sort:
-            sort_records_by_cof_name(records)
-
-        with open(args.animdata_d2, mode="wb") as animdata_d2_file:
-            dump(records, animdata_d2_file)
+        cli_compile(args)
     elif args.command == "decompile":
-        with open(args.animdata_d2, mode="rb") as animdata_d2_file:
-            records = load(animdata_d2_file)
-
-        check_duplicate_cof_names(records)
-        for record in records:
-            check_out_of_bounds_triggers(record)
-        if args.sort:
-            sort_records_by_cof_name(records)
-
-        if args.txt:
-            with open(args.target, mode="w", newline="") as target_file:
-                dump_txt(records, target_file)
-        elif args.json:
-            json_data = [record.make_dict() for record in records]
-            with open(args.target, mode="w") as target_file:
-                json.dump(json_data, target_file, indent=2)
-        else:
-            raise ValueError("No file format specified")
+        cli_decompile(args)
     else:
         raise ValueError(f"Unexpected command: {args.command!r}")
 
