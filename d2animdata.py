@@ -125,6 +125,8 @@ DWORD_MAX = 0xFFFFFFFF
 class Record:
     """Represents an AnimData record entry."""
 
+    # pylint: disable=too-many-instance-attributes
+
     cof_name: str = ManagedProperty(attrgetter("_cof_name"))
 
     @cof_name.setter
