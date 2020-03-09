@@ -167,9 +167,7 @@ jobs:
         path: dist
 
     - name: Publish package to TestPyPI
-      # Use SHA-1 hash because this GitHub Action isn't mature yet
-      # TODO: Replace hash with a tag name when this becomes stable
-      uses: pypa/gh-action-pypi-publish@37e305e7413032d8422456179fee28fac7d25187
+      uses: pypa/gh-action-pypi-publish@v1.1.0
       with:
         user: __token__
         password: ${{ secrets.TEST_PYPI_TOKEN }}
