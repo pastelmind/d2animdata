@@ -3,8 +3,7 @@
 import unittest
 from io import StringIO
 
-from d2animdata import TabbedTextError, Record, dump_txt, load_txt
-
+from d2animdata import Record, TabbedTextError, dump_txt, load_txt
 
 # NOTE: csv.writer() always uses '\r\n' as the line separator if the dialect is
 # set to 'excel' or 'excel-tab'. See:

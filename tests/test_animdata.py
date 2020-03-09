@@ -2,13 +2,12 @@
 
 import unittest
 from io import BytesIO
-from typing import List, Iterable
+from typing import Iterable, List
 
 import d2animdata
 from d2animdata import AnimDataError, Record
 
 from .valid_data import VALID_ANIMDATA, VALID_RECORDS
-
 
 # Invalid AnimData.D2 with a record whose hash does not match the block index
 ANIMDATA_BAD_HASH = (

@@ -2,6 +2,7 @@
 """Setup script for d2animdata."""
 
 import re
+
 from setuptools import setup
 
 

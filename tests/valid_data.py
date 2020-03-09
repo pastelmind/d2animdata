@@ -2,7 +2,6 @@
 
 from d2animdata import Record
 
-
 # Valid AnimData.D2 with 1 hash record each in the first and second blocks.
 # This decompiles to VALID_JSON and VALID_TXT without warnings.
 VALID_ANIMDATA = (
