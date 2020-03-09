@@ -55,7 +55,7 @@ class AnimDataError(Error):
         return self.message + (f" ({fields})" if fields else "")
 
 
-class LoadTxtError(Error):
+class TabbedTextError(Error):
     """Raised when loading a TXT file fails.
 
     Attributes:
@@ -403,7 +403,7 @@ def load_txt(file: Iterable[str]) -> List[Record]:
                 )
             )
         except (KeyError, TypeError, ValueError, csv.Error) as err:
-            raise LoadTxtError("Failed to parse TXT file", row=row_num) from err
+            raise TabbedTextError("Failed to parse TXT file", row=row_num) from err
     return records
 
 

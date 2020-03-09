@@ -3,7 +3,7 @@
 import unittest
 from io import StringIO
 
-from d2animdata import LoadTxtError, Record, dump_txt, load_txt
+from d2animdata import TabbedTextError, Record, dump_txt, load_txt
 
 
 # NOTE: csv.writer() always uses '\r\n' as the line separator if the dialect is
@@ -97,7 +97,7 @@ class TestLoadTabbedText(unittest.TestCase):
             # Record 0
             + ("00A1HTH\t1\t256\t0\t1\t2\t3" + "\t0" * 140 + "\r\n")
         )
-        with self.assertRaises(LoadTxtError):
+        with self.assertRaises(TabbedTextError):
             load_txt(StringIO(tabbed_txt_content, newline=""))
 
     @unittest.expectedFailure
@@ -111,14 +111,14 @@ class TestLoadTabbedText(unittest.TestCase):
             # Record 0
             + ("00A1HTH\t1\t256\t0\t1\t2\t3\r\n")
         )
-        with self.assertRaises(LoadTxtError):
+        with self.assertRaises(TabbedTextError):
             load_txt(StringIO(tabbed_txt_content, newline=""))
 
     @unittest.expectedFailure
     def test_invalid_format(self) -> None:
         """Tests if loading fails when a tabbed text file cannot be parsed."""
         tabbed_txt = StringIO("This isn't a tabbed text file!", newline="")
-        with self.assertRaises(LoadTxtError):
+        with self.assertRaises(TabbedTextError):
             load_txt(tabbed_txt)
 
 
