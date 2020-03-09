@@ -55,16 +55,33 @@ class AnimDataError(Error):
         return self.message + (f" ({fields})" if fields else "")
 
 
+@dataclasses.dataclass(eq=False)
 class TabbedTextError(Error):
-    """Raised when loading a TXT file fails.
+    """Tabbed text file error.
 
     Attributes:
-        row: Row index that caused the failure (starts at 0).
+        message:
+            Explanation of the error.
+        row:
+            Row index that caused the failure (starts at 0).
+        column:
+            Column index that caused the failure (starts at 0).
+        column_name:
+            Name of the column that caused the failure.
     """
 
-    def __init__(self, message: str, row: Optional[int] = None) -> None:
-        super().__init__(message + ("" if row is None else f" (at row index {row})"))
-        self.row = row
+    message: str
+    row: Optional[int] = None
+    column: Optional[int] = None
+    column_name: Optional[str] = None
+
+    def __str__(self) -> str:
+        fields = ", ".join(
+            f"{name}={value!r}"
+            for name, value in vars(self).items()
+            if value is not None and name != "message"
+        )
+        return self.message + (f" ({fields})" if fields else "")
 
 
 def hash_cof_name(cof_name: str) -> int:
@@ -380,30 +397,74 @@ def dump(records: Iterable[Record], file: BinaryIO) -> None:
     file.write(dumps(records))
 
 
+def get_column_index(column_indices: Mapping[int, str], column_name: str) -> int:
+    """Helper that retrieves the index of a column name."""
+    try:
+        return column_indices[column_name]
+    except KeyError:
+        raise TabbedTextError("Missing column", column_name=column_name) from None
+
+
+def get_cell(row: List[str], column_index: int) -> str:
+    """Helper that retrieves a value from a CSV row."""
+    try:
+        return row[column_index]
+    except IndexError:
+        raise TabbedTextError("Missing cell", column=column_index) from None
+
+
+def get_int_cell(row: List[str], column_index: int) -> int:
+    """Helper that retrieves a value from a CSV row and converts it to an int."""
+    try:
+        return int(get_cell(row, column_index))
+    except ValueError as error:
+        raise TabbedTextError(
+            "Cannot convert cell value to integer", column=column_index,
+        ) from error
+
+
 def load_txt(file: Iterable[str]) -> List[Record]:
     """Loads AnimData records from a tabbed text file."""
     reader = csv.reader(file, dialect="excel-tab")
-    headers = {header: index for index, header in enumerate(next(reader))}
-    cof_name_index = headers["CofName"]
-    frames_per_direction_index = headers["FramesPerDirection"]
-    animation_speed_index = headers["AnimationSpeed"]
-    frame_data_indices = [headers[f"FrameData{frame:03}"] for frame in range(FRAME_MAX)]
+    try:
+        column_names = next(reader)
+    except StopIteration:  # File is empty
+        return []
+    except csv.Error as error:
+        raise TabbedTextError("Cannot parse tabbed text file", row=0) from error
+
+    column_indices = {header: index for index, header in enumerate(column_names)}
+
+    cof_name_index = get_column_index(column_indices, "CofName")
+    frames_per_direction_index = get_column_index(column_indices, "FramesPerDirection")
+    animation_speed_index = get_column_index(column_indices, "AnimationSpeed")
+    frame_data_indices = [
+        get_column_index(column_indices, f"FrameData{frame:03}")
+        for frame in range(FRAME_MAX)
+    ]
 
     records = []
-    for row_num, row in enumerate(reader):
-        try:
-            records.append(
-                Record(
-                    cof_name=row[cof_name_index],
-                    frames_per_direction=int(row[frames_per_direction_index]),
-                    animation_speed=int(row[animation_speed_index]),
-                    triggers=ActionTriggers.from_codes(
-                        int(row[index]) for index in frame_data_indices
-                    ),
-                )
+    try:
+        for row_num, row in enumerate(reader):
+            record = Record(
+                cof_name=get_cell(row, cof_name_index),
+                frames_per_direction=get_int_cell(row, frames_per_direction_index),
+                animation_speed=get_int_cell(row, animation_speed_index),
+                triggers=ActionTriggers.from_codes(
+                    get_int_cell(row, index) for index in frame_data_indices
+                ),
             )
-        except (KeyError, TypeError, ValueError, csv.Error) as err:
-            raise TabbedTextError("Failed to parse TXT file", row=row_num) from err
+            records.append(record)
+    except TabbedTextError as error:
+        # Add extra info for debugging
+        error.row = row_num
+        error.column_name = column_names[error.column]
+        raise
+    except ValueError as error:
+        raise TabbedTextError("Invalid record field", row=row_num) from error
+    except csv.Error as error:
+        raise TabbedTextError("Cannot parse tabbed text file", row=row_num) from error
+
     return records
 
 

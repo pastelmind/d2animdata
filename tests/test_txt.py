@@ -52,13 +52,9 @@ class TestLoadTabbedText(unittest.TestCase):
         records = load_txt(tabbed_txt)
         self.assertEqual(records, RECORDS_VALID)
 
-    @unittest.expectedFailure
     def test_bad_records(self) -> None:
         """Tests if loading a tabbed text file containing bad records causes an
         error.
-
-        The exception should be a plain Python error, since the text file itself
-        is well-formed.
         """
         tabbed_txt_content = (
             # Header row
@@ -68,9 +64,7 @@ class TestLoadTabbedText(unittest.TestCase):
             # Record 0
             + ("BAD COF NAME\t1\t256\t0\t1\t2\t3" + "\t0" * 140 + "\r\n")
         )
-        with self.assertRaises(
-            ValueError, msg="Must raise ValueError if COF name is invalid"
-        ):
+        with self.assertRaises(TabbedTextError):
             load_txt(StringIO(tabbed_txt_content, newline=""))
 
         tabbed_txt_content = (
@@ -81,12 +75,9 @@ class TestLoadTabbedText(unittest.TestCase):
             # Record 0
             + ("00A1HTH\t-1\t256\t0\t1\t2\t3" + "\t0" * 140 + "\r\n")
         )
-        with self.assertRaises(
-            ValueError, msg="Must raise ValueError if frames_per_direction is invalid"
-        ):
+        with self.assertRaises(TabbedTextError):
             load_txt(StringIO(tabbed_txt_content, newline=""))
 
-    @unittest.expectedFailure
     def test_missing_columns(self) -> None:
         """Tests if loading fails when a tabbed text file has missing columns."""
         tabbed_txt_content = (
@@ -100,7 +91,6 @@ class TestLoadTabbedText(unittest.TestCase):
         with self.assertRaises(TabbedTextError):
             load_txt(StringIO(tabbed_txt_content, newline=""))
 
-    @unittest.expectedFailure
     def test_missing_fields(self) -> None:
         """Tests if loading fails when a tabbed text file has missing fields."""
         tabbed_txt_content = (
@@ -114,7 +104,6 @@ class TestLoadTabbedText(unittest.TestCase):
         with self.assertRaises(TabbedTextError):
             load_txt(StringIO(tabbed_txt_content, newline=""))
 
-    @unittest.expectedFailure
     def test_invalid_format(self) -> None:
         """Tests if loading fails when a tabbed text file cannot be parsed."""
         tabbed_txt = StringIO("This isn't a tabbed text file!", newline="")
