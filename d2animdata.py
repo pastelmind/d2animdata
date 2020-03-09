@@ -28,8 +28,24 @@ from typing import (
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+@dataclasses.dataclass(eq=False)
 class Error(Exception):
-    """Base class for all errors thrown by this module."""
+    """Base class for all errors thrown by this module.
+
+    Attributes:
+        message:
+            Explanation of the error.
+    """
+
+    message: str
+
+    def __str__(self) -> str:
+        fields = ", ".join(
+            f"{name}={value!r}"
+            for name, value in vars(self).items()
+            if value is not None and name != "message"
+        )
+        return self.message + (f" ({fields})" if fields else "")
 
 
 @dataclasses.dataclass(eq=False)
@@ -43,16 +59,7 @@ class AnimDataError(Error):
             Offset of the byte that caused the failure.
     """
 
-    message: str
     offset: Optional[int] = None
-
-    def __str__(self) -> str:
-        fields = ", ".join(
-            f"{name}={value!r}"
-            for name, value in vars(self).items()
-            if value is not None and name != "message"
-        )
-        return self.message + (f" ({fields})" if fields else "")
 
 
 @dataclasses.dataclass(eq=False)
@@ -70,18 +77,9 @@ class TabbedTextError(Error):
             Name of the column that caused the failure.
     """
 
-    message: str
     row: Optional[int] = None
     column: Optional[int] = None
     column_name: Optional[str] = None
-
-    def __str__(self) -> str:
-        fields = ", ".join(
-            f"{name}={value!r}"
-            for name, value in vars(self).items()
-            if value is not None and name != "message"
-        )
-        return self.message + (f" ({fields})" if fields else "")
 
 
 def hash_cof_name(cof_name: str) -> int:
