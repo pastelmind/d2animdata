@@ -11,7 +11,6 @@ on:
     types: [published]
 
 env:
-  PIP_REQUIREMENTS: requirements-dev.txt
   # Default Python version for running build and lint jobs
   python-version: 3.8
 
@@ -19,6 +18,8 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    env:
+      PIP_REQUIREMENTS: requirements-build-test.txt
 
     steps:
     - uses: actions/checkout@v2
@@ -54,6 +55,8 @@ jobs:
   lint:
 
     runs-on: ubuntu-latest
+    env:
+      PIP_REQUIREMENTS: requirements-lint.txt
     # Use the build matrix to reuse steps across lint jobs
     # TODO: Separate this into individual jobs when GitHub Actions gain support
     # for YAML aliases and anchors.
@@ -98,6 +101,8 @@ jobs:
 
     needs: build
     runs-on: ${{ matrix.os }}
+    env:
+      PIP_REQUIREMENTS: requirements-build-test.txt
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
