@@ -1,7 +1,4 @@
-black~=19.10b0
-isort~=4.3.21
+# Dependencies for general development
+-r requirements-build-test.txt
+-r requirements-lint.txt
 pipdeptree~=0.13.2
-pylint~=2.4.4
-setuptools~=41.2.0
-tox~=3.14.5
-wheel~=0.34.2
