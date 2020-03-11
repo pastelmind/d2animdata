@@ -119,7 +119,7 @@ _V = TypeVar("_V")
 
 
 # Based on https://docs.python.org/3/howto/descriptor.html#properties
-class ManagedProperty:
+class _ManagedProperty:
     """Managed, required property for use with dataclasses."""
 
     def __init__(
@@ -230,7 +230,7 @@ class Record:
         )
 
 
-@ManagedProperty(Record, name="cof_name")
+@_ManagedProperty(Record, name="cof_name")
 def _validate_cof_name(value: str) -> str:
     if not isinstance(value, str):
         raise TypeError(f"cof_name must be a string (got {value!r})")
@@ -245,7 +245,7 @@ def _validate_cof_name(value: str) -> str:
     return value
 
 
-@ManagedProperty(Record, name="frames_per_direction")
+@_ManagedProperty(Record, name="frames_per_direction")
 def _validate_frames_per_direction(value: int) -> int:
     if not isinstance(value, int):
         raise TypeError(f"frames_per_direction must be an integer (got {value!r})")
@@ -257,7 +257,7 @@ def _validate_frames_per_direction(value: int) -> int:
     return value
 
 
-@ManagedProperty(Record, name="animation_speed")
+@_ManagedProperty(Record, name="animation_speed")
 def _validate_animation_speed(value: int) -> int:
     if not isinstance(value, int):
         raise TypeError(f"animation_speed must be an integer (got {value!r})")
@@ -268,7 +268,7 @@ def _validate_animation_speed(value: int) -> int:
     return value
 
 
-@ManagedProperty(Record, name="triggers")
+@_ManagedProperty(Record, name="triggers")
 def _validate_triggers(
     value: Union[Iterable[Tuple[int, int]], Mapping[int, int]]
 ) -> ActionTriggers:
@@ -278,7 +278,7 @@ def _validate_triggers(
 RECORD_FORMAT = f"<8sLL{FRAME_MAX}B"
 
 
-def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
+def _unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
     """Unpacks a single AnimData record from the `buffer` at `offset`."""
     try:
         (
@@ -306,7 +306,7 @@ def unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
         raise AnimDataError("Invalid record field", offset=offset) from error
 
 
-def pack_record(record: Record) -> bytes:
+def _pack_record(record: Record) -> bytes:
     """Packs a single AnimData record."""
     return struct.pack(
         RECORD_FORMAT,
@@ -317,12 +317,12 @@ def pack_record(record: Record) -> bytes:
     )
 
 
-def sort_records_by_cof_name(records: List[Record]) -> None:
+def _sort_records_by_cof_name(records: List[Record]) -> None:
     """Sorts a list of Records in place by COF name."""
     records.sort(key=lambda record: record.cof_name)
 
 
-def check_duplicate_cof_names(records: Iterable[Record]) -> None:
+def _check_duplicate_cof_names(records: Iterable[Record]) -> None:
     """Checks if the list of AnimData records contains duplicate COF names."""
     cof_names_seen = set()
     for record in records:
@@ -332,7 +332,7 @@ def check_duplicate_cof_names(records: Iterable[Record]) -> None:
             cof_names_seen.add(record.cof_name)
 
 
-def check_out_of_bounds_triggers(record: Record) -> None:
+def _check_out_of_bounds_triggers(record: Record) -> None:
     """Warns if a record has any out-of-bound trigger frames.
 
     A trigger frame is out-of-bounds if its frame index is same or greater than
@@ -376,7 +376,7 @@ def loads(data: bytes) -> List[Record]:
 
         records = []
         for _ in range(record_count):
-            record, record_size = unpack_record(data, offset=offset)
+            record, record_size = _unpack_record(data, offset=offset)
             hash_value = hash_cof_name(record.cof_name)
             if block_index != hash_value:
                 raise AnimDataError(
@@ -423,7 +423,7 @@ def dumps(records: Iterable[Record]) -> bytearray:
     for block in hash_table:
         packed_data += struct.pack(RECORD_COUNT_FORMAT, len(block))
         for record in block:
-            packed_data += pack_record(record)
+            packed_data += _pack_record(record)
 
     return packed_data
 
@@ -433,7 +433,7 @@ def dump(records: Iterable[Record], file: BinaryIO) -> None:
     file.write(dumps(records))
 
 
-def get_column_index(column_indices: Mapping[int, str], column_name: str) -> int:
+def _get_column_index(column_indices: Mapping[int, str], column_name: str) -> int:
     """Helper that retrieves the index of a column name."""
     try:
         return column_indices[column_name]
@@ -441,7 +441,7 @@ def get_column_index(column_indices: Mapping[int, str], column_name: str) -> int
         raise TabbedTextError("Missing column", column_name=column_name) from None
 
 
-def get_cell(row: List[str], column_index: int) -> str:
+def _get_cell(row: List[str], column_index: int) -> str:
     """Helper that retrieves a value from a CSV row."""
     try:
         return row[column_index]
@@ -449,10 +449,10 @@ def get_cell(row: List[str], column_index: int) -> str:
         raise TabbedTextError("Missing cell", column=column_index) from None
 
 
-def get_int_cell(row: List[str], column_index: int) -> int:
+def _get_int_cell(row: List[str], column_index: int) -> int:
     """Helper that retrieves a value from a CSV row and converts it to an int."""
     try:
-        return int(get_cell(row, column_index))
+        return int(_get_cell(row, column_index))
     except ValueError as error:
         raise TabbedTextError(
             "Cannot convert cell value to integer", column=column_index,
@@ -471,11 +471,11 @@ def load_txt(file: Iterable[str]) -> List[Record]:
 
     column_indices = {header: index for index, header in enumerate(column_names)}
 
-    cof_name_index = get_column_index(column_indices, "CofName")
-    frames_per_direction_index = get_column_index(column_indices, "FramesPerDirection")
-    animation_speed_index = get_column_index(column_indices, "AnimationSpeed")
+    cof_name_index = _get_column_index(column_indices, "CofName")
+    frames_per_direction_index = _get_column_index(column_indices, "FramesPerDirection")
+    animation_speed_index = _get_column_index(column_indices, "AnimationSpeed")
     frame_data_indices = [
-        get_column_index(column_indices, f"FrameData{frame:03}")
+        _get_column_index(column_indices, f"FrameData{frame:03}")
         for frame in range(FRAME_MAX)
     ]
 
@@ -483,11 +483,11 @@ def load_txt(file: Iterable[str]) -> List[Record]:
     try:
         for row_num, row in enumerate(reader):
             record = Record(
-                cof_name=get_cell(row, cof_name_index),
-                frames_per_direction=get_int_cell(row, frames_per_direction_index),
-                animation_speed=get_int_cell(row, animation_speed_index),
+                cof_name=_get_cell(row, cof_name_index),
+                frames_per_direction=_get_int_cell(row, frames_per_direction_index),
+                animation_speed=_get_int_cell(row, animation_speed_index),
                 triggers=ActionTriggers.from_codes(
-                    get_int_cell(row, index) for index in frame_data_indices
+                    _get_int_cell(row, index) for index in frame_data_indices
                 ),
             )
             records.append(record)
@@ -527,7 +527,7 @@ def dump_txt(records: Iterable[Record], file: TextIO) -> None:
         )
 
 
-def init_subparser_compile(parser: argparse.ArgumentParser) -> None:
+def _init_subparser_compile(parser: argparse.ArgumentParser) -> None:
     """Initialize the argument subparser for the `compile` command."""
     parser.add_argument("source", help="JSON or tabbed text file to compile")
     parser.add_argument("animdata_d2", help="AnimData.D2 file to save to")
@@ -544,7 +544,7 @@ def init_subparser_compile(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def cli_compile(args: argparse.Namespace) -> None:
+def _cli_compile(args: argparse.Namespace) -> None:
     """Handles the `compile` command."""
     if args.txt:
         with open(args.source, newline="") as source_file:
@@ -556,17 +556,17 @@ def cli_compile(args: argparse.Namespace) -> None:
     else:
         raise ValueError("No file format specified")
 
-    check_duplicate_cof_names(records)
+    _check_duplicate_cof_names(records)
     for record in records:
-        check_out_of_bounds_triggers(record)
+        _check_out_of_bounds_triggers(record)
     if args.sort:
-        sort_records_by_cof_name(records)
+        _sort_records_by_cof_name(records)
 
     with open(args.animdata_d2, mode="wb") as animdata_d2_file:
         dump(records, animdata_d2_file)
 
 
-def init_subparser_decompile(parser: argparse.ArgumentParser) -> None:
+def _init_subparser_decompile(parser: argparse.ArgumentParser) -> None:
     """Initialize the argument subparser for the `decompile` command."""
     parser.add_argument("animdata_d2", help="AnimData.D2 file to decompile")
     parser.add_argument("target", help="JSON or tabbed text file to save to")
@@ -583,16 +583,16 @@ def init_subparser_decompile(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def cli_decompile(args: argparse.Namespace):
+def _cli_decompile(args: argparse.Namespace):
     """Handles the `decompile` command."""
     with open(args.animdata_d2, mode="rb") as animdata_d2_file:
         records = load(animdata_d2_file)
 
-    check_duplicate_cof_names(records)
+    _check_duplicate_cof_names(records)
     for record in records:
-        check_out_of_bounds_triggers(record)
+        _check_out_of_bounds_triggers(record)
     if args.sort:
-        sort_records_by_cof_name(records)
+        _sort_records_by_cof_name(records)
 
     if args.txt:
         with open(args.target, mode="w", newline="") as target_file:
@@ -614,10 +614,10 @@ def main(argv: List[str] = None) -> None:
     )
     subparsers = parser.add_subparsers(dest="command")
 
-    init_subparser_compile(
+    _init_subparser_compile(
         subparsers.add_parser("compile", help="Compiles JSON to AnimData.D2")
     )
-    init_subparser_decompile(
+    _init_subparser_decompile(
         subparsers.add_parser("decompile", help="Deompiles AnimData.D2 to JSON")
     )
 
@@ -626,9 +626,9 @@ def main(argv: List[str] = None) -> None:
     if args.command is None:
         parser.print_help()
     elif args.command == "compile":
-        cli_compile(args)
+        _cli_compile(args)
     elif args.command == "decompile":
-        cli_decompile(args)
+        _cli_decompile(args)
     else:
         raise ValueError(f"Unexpected command: {args.command!r}")
 
