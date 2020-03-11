@@ -44,7 +44,7 @@ jobs:
 
     # Manual build step required because tox only builds an sdist and not wheels
     - name: Build distributions
-      run: python setup.py sdist bdist_wheel
+      run: flit build
 
     - name: Upload distributions
       uses: actions/upload-artifact@v1
