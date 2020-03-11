@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Extracts and saves AnimData.D2"""
+"""Read, write, and convert AnimData.D2 to JSON & tabbed TXT (and vice versa)."""
 
 __version__ = "0.0.1a0"
 
@@ -54,11 +54,10 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 @dataclasses.dataclass(eq=False)
 class Error(Exception):
-    """Base class for all errors thrown by this module.
+    """Base class for all exceptions raised by this module.
 
-    Attributes:
-        message:
-            Explanation of the error.
+    ### Attributes:
+    - `message`: Explanation of the error.
     """
 
     message: str
@@ -74,13 +73,11 @@ class Error(Exception):
 
 @dataclasses.dataclass(eq=False)
 class AnimDataError(Error):
-    """Malformed or corrupted AnimData.D2.
+    """Raised when an operation on a binary AnimData.D2 file fails.
 
-    Attributes:
-        message:
-            Explanation of the error.
-        offset:
-            Offset of the byte that caused the failure.
+    ### Attributes:
+    - `message`: Explanation of the error.
+    - `offset`: Offset of the byte that caused the failure.
     """
 
     offset: Optional[int] = None
@@ -88,17 +85,13 @@ class AnimDataError(Error):
 
 @dataclasses.dataclass(eq=False)
 class TabbedTextError(Error):
-    """Tabbed text file error.
+    """Raised when an operation on a tabbed text file fails.
 
-    Attributes:
-        message:
-            Explanation of the error.
-        row:
-            Row index that caused the failure (starts at 0).
-        column:
-            Column index that caused the failure (starts at 0).
-        column_name:
-            Name of the column that caused the failure.
+    ### Attributes:
+    - `message`: Explanation of the error.
+    - `row`: Row index that caused the failure (starts at 0).
+    - `column`: Column index that caused the failure (starts at 0).
+    - `column_name`: Name of the column that caused the failure.
     """
 
     row: Optional[int] = None
@@ -107,7 +100,11 @@ class TabbedTextError(Error):
 
 
 def hash_cof_name(cof_name: str) -> int:
-    """Returns the block hash for the given COF name."""
+    """Computes the block hash for the given COF name.
+
+    :param cof_name: COF name as an ASCII string.
+    :return: Hash value as integer between 0 and 255, inclusive.
+    """
     # Based on:
     #   https://d2mods.info/forum/viewtopic.php?p=24163#p24163
     #   https://d2mods.info/forum/viewtopic.php?p=24295#p24295
@@ -153,9 +150,35 @@ FRAME_MAX = 144
 
 
 class ActionTriggers(UserDict):
-    """Mapping of trigger frames to trigger codes.
+    """Specialized dictionary that maps frame indices to trigger codes.
 
-    Iteration is guaranteed to be sorted by frame index in ascending order.
+    Example usage:
+
+    ```python
+    triggers = ActionTriggers()
+    triggers[7] = 1     # Set trigger code 1 at frame #7
+    triggers[10] = 2    # Set trigger code 2 at frame #10
+    ```
+
+    The above is equivalent to:
+
+    ```python
+    triggers = ActionTriggers({ 7: 1, 10: 2 })
+    ```
+
+    Attempting to assign invalid trigger frames or values will raise an error:
+
+    ```python
+    triggers[255] = 1   # ValueError, frame index must be between 0 and 143
+    triggers[3] = 4     # ValueError, trigger code must be between 1 and 3
+    ```
+
+    Iteration is guaranteed to be sorted by frame index in ascending order:
+
+    ```python
+    # Iteration order: (7, 1), (10, 2)
+    for frame, code in triggers.items():
+    ```
     """
 
     # pylint: disable=too-many-ancestors
@@ -179,14 +202,22 @@ class ActionTriggers(UserDict):
         return iter(sorted(self.data))
 
     def to_codes(self) -> Iterable[int]:
-        """Yields a frame codes for each frame in order."""
+        """Yields a nonzero frame code for each trigger frame in order.
+
+        :return: Generator that yields trigger codes for each trigger frame.
+        """
         for frame in range(FRAME_MAX):
             yield self.get(frame, 0)
 
     @classmethod
     def from_codes(cls, frame_codes: Iterable[int]) -> "ActionTriggers":
-        """Creates an ActionTriggers object from an iterable of codes for each
-        frame."""
+        """Creates an ActionTriggers from an iterable of codes for every frame.
+
+        :param frame_codes: List of trigger codes for each frame.
+        :return: New ActionTriggers dictionary.
+        :raise TypeError: If a frame code is not an integer.
+        :raise ValueError: If a frame code is invalid.
+        """
         obj = cls()
         for frame, code in enumerate(frame_codes):
             if frame >= FRAME_MAX:
@@ -201,7 +232,20 @@ DWORD_MAX = 0xFFFFFFFF
 
 @dataclasses.dataclass
 class Record:
-    """Represents an AnimData record entry."""
+    """Represents an AnimData record entry.
+
+    All attributes are validated on assignment, including the constructor. An
+    invalid value will raise `TypeError` or `ValueError`.
+
+    ### Attributes:
+    - `cof_name`: Read/write attribute. Accepts a 7-letter ASCII string.
+    - `frames_per_direction`:
+        Read/write attribute. Accepts a nonnegative integer.
+    - `animation_speed`: Read/write attribute. Accepts a nonnegative integer.
+    - `triggers`:
+        Read/write attribute. Accepts any mapping that can be converted to an
+        ActionTriggers dict.
+    """
 
     cof_name: str
     frames_per_direction: int
@@ -209,7 +253,10 @@ class Record:
     triggers: ActionTriggers
 
     def make_dict(self) -> dict:
-        """Returns a plain dict that can be serialized to another format."""
+        """Converts the Record to a dict that can be serialized to another format.
+
+        :return: Plain dict created from this Record.
+        """
         self_dict = dataclasses.asdict(self)
         self_dict["triggers"] = dict(self_dict["triggers"])
         return self_dict
@@ -221,6 +268,9 @@ class Record:
         Trigger frame indices are automatically converted to integers in order
         to support data formats that do not support integer mapping keys
         (e.g. JSON).
+
+        :param obj: Dictionary to convert to a Record.
+        :return: New Record object.
         """
         return cls(
             cof_name=obj["cof_name"],
@@ -279,7 +329,12 @@ RECORD_FORMAT = f"<8sLL{FRAME_MAX}B"
 
 
 def _unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
-    """Unpacks a single AnimData record from the `buffer` at `offset`."""
+    """Unpacks a single Record from a buffer, optionally starting at an offset.
+
+    :param buffer: `bytes`-like object to parse.
+    :param offset: Offset of `buffer` to parse the `Record` from.
+    :return: The unpacked Record object.
+    """
     try:
         (
             cof_name,
@@ -307,7 +362,11 @@ def _unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
 
 
 def _pack_record(record: Record) -> bytes:
-    """Packs a single AnimData record."""
+    """Packs a single AnimData record.
+
+    :param record: Record object to pack.
+    :return: The Record packed as a `bytes` object.
+    """
     return struct.pack(
         RECORD_FORMAT,
         bytes(record.cof_name, encoding="ascii"),
@@ -318,12 +377,18 @@ def _pack_record(record: Record) -> bytes:
 
 
 def _sort_records_by_cof_name(records: List[Record]) -> None:
-    """Sorts a list of Records in place by COF name."""
+    """Sorts a list of Records in-place by COF name in ascending order.
+
+    :param records: List of `Record`s to sort in-place.
+    """
     records.sort(key=lambda record: record.cof_name)
 
 
 def _check_duplicate_cof_names(records: Iterable[Record]) -> None:
-    """Checks if the list of AnimData records contains duplicate COF names."""
+    """Warns if a list of Record objects contains duplicate COF names.
+
+    :param records: Iterable of Record objects to check.
+    """
     cof_names_seen = set()
     for record in records:
         if record.cof_name in cof_names_seen:
@@ -333,11 +398,9 @@ def _check_duplicate_cof_names(records: Iterable[Record]) -> None:
 
 
 def _check_out_of_bounds_triggers(record: Record) -> None:
-    """Warns if a record has any out-of-bound trigger frames.
+    """Warns if a Record object has any out-of-bounds trigger frames.
 
-    A trigger frame is out-of-bounds if its frame index is same or greater than
-    the record's frames_per_direction. The game might never reach such a frame,
-    making the trigger useless.
+    :param record: A Record object to check.
     """
     for frame in record.triggers:
         if frame >= record.frames_per_direction:
@@ -354,12 +417,9 @@ RECORD_COUNT_FORMAT = "<L"
 def loads(data: bytes) -> List[Record]:
     """Loads the contents of AnimData.D2 from binary `data`.
 
-    Args:
-        file:
-            Contents of AnimData.D2 in binary format.
-
-    Returns:
-        List of Record objects, ordered by their original order in the `data`.
+    :param data: Contents of AnimData.D2 in binary format.
+    :return: List of `Record`s, ordered by their original order in the `data`.
+    :raise AnimDataError: If the AnimData.D2 file is malformed or corrupted.
     """
     blocks = []
     offset = 0
@@ -402,18 +462,19 @@ def loads(data: bytes) -> List[Record]:
 def load(file: BinaryIO) -> List[Record]:
     """Loads the contents of AnimData.D2 from the a binary file.
 
-    Args:
-        file:
-            Readable file object opened in binary mode.
-
-    Returns:
-        List of Record objects.
+    :param file: Readable file object opened in binary mode (`mode='rb'`).
+    :return: List of Record objects, maintaining their original order in `file`.
+    :raise AnimDataError: If the AnimData.D2 file is malformed or corrupted.
     """
     return loads(file.read())
 
 
 def dumps(records: Iterable[Record]) -> bytearray:
-    """Packs AnimData records into AnimData.D2 hash table format."""
+    """Packs AnimData records into AnimData.D2 hash table format.
+
+    :param records: Iterable of Record objects.
+    :return: `bytearray` containing the packed AnimData.D2 file.
+    """
     hash_table = [[] for _ in range(256)]
     for record in records:
         hash_value = hash_cof_name(record.cof_name)
@@ -429,7 +490,11 @@ def dumps(records: Iterable[Record]) -> bytearray:
 
 
 def dump(records: Iterable[Record], file: BinaryIO) -> None:
-    """Packs AnimData records into binary format and writes them to a file."""
+    """Packs AnimData records into AnimData.D2 format and writes them to a file.
+
+    :param records: Iterable of Record objects to write.
+    :param file: Writable file object opened in binary mode (`mode='wb'`).
+    """
     file.write(dumps(records))
 
 
@@ -460,7 +525,15 @@ def _get_int_cell(row: List[str], column_index: int) -> int:
 
 
 def load_txt(file: Iterable[str]) -> List[Record]:
-    """Loads AnimData records from a tabbed text file."""
+    """Loads AnimData records from a tabbed text file.
+
+    :param file:
+        A text file object, or any object which supports the iterator protocol
+        and returns a string each time its `__next__()` method is called.
+        If `file` is a file object, it should be opened with `newline=''`.
+    :return: List of `Record`s loaded from the `file`.
+    :raises TabbedTextError: If the tabbed text file cannot be loaded.
+    """
     reader = csv.reader(file, dialect="excel-tab")
     try:
         column_names = next(reader)
@@ -505,7 +578,13 @@ def load_txt(file: Iterable[str]) -> List[Record]:
 
 
 def dump_txt(records: Iterable[Record], file: TextIO) -> None:
-    """Saves AnimData records to a tabbed text file."""
+    """Saves AnimData records to a tabbed text file.
+
+    :param records: Iterable of `Record`s to write to the `file`.
+    :param file:
+        A text file object, or any any object with a `write()` method.
+        If `file` is a file object, it should be opened with `newline=''`.
+    """
     writer = csv.writer(file, dialect="excel-tab")
     writer.writerow(
         [
@@ -606,7 +685,10 @@ def _cli_decompile(args: argparse.Namespace):
 
 
 def main(argv: List[str] = None) -> None:
-    """Entrypoint for the CLI script."""
+    """Entrypoint for the CLI script.
+
+    :param argv: List of argument strings. If not given, `sys.argv[1:]` is used.
+    """
     logging.basicConfig(format="%(levelname)s: %(message)s")
 
     parser = argparse.ArgumentParser(
