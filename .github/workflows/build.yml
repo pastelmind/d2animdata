@@ -44,7 +44,7 @@ jobs:
 
     # Manual build step required because tox only builds an sdist and not wheels
     - name: Build distributions
-      run: python setup.py sdist bdist_wheel
+      run: flit build
 
     - name: Upload distributions
       uses: actions/upload-artifact@v1
@@ -69,7 +69,7 @@ jobs:
           - lint-tool: isort
             run: isort --check-only
           - lint-tool: pylint
-            run: pylint *.py src tests
+            run: pylint src tests
       # Make all lint jobs run to completion for combined diagnosis
       fail-fast: false
 
