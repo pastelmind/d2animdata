@@ -39,7 +39,8 @@ setup(
     url="https://github.com/pastelmind/d2animdata",
     py_modules=["d2animdata"],
     entry_points={"console_scripts": "d2animdata = d2animdata:main"},
-    python_requires=">=3.7",
+    python_requires=">=3.6",
+    install_requires=["dataclasses ~= 0.7; python_version < '3.7'"],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Console",
@@ -47,6 +48,7 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
     ],
