@@ -8,7 +8,7 @@ from setuptools import setup
 
 def read(path: str) -> str:
     """Reads and returns the contents of a file."""
-    with open(path) as file:
+    with open(path, encoding="utf-8") as file:
         return file.read()
 
 
