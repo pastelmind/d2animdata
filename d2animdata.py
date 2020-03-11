@@ -33,9 +33,10 @@ import json
 import logging
 import struct
 from collections import UserDict
-from operator import attrgetter
 from typing import (
+    Any,
     BinaryIO,
+    Callable,
     Iterable,
     Iterator,
     List,
@@ -43,6 +44,7 @@ from typing import (
     Optional,
     TextIO,
     Tuple,
+    TypeVar,
     Union,
 )
 
@@ -112,23 +114,39 @@ def hash_cof_name(cof_name: str) -> int:
     return sum(map(ord, cof_name.upper())) % 256
 
 
-# Loosely inspired by:
-#   https://florimond.dev/blog/articles/2018/10/reconciling-dataclasses-and-properties-in-python/
-class ManagedProperty(property):
+_T = TypeVar("_T")
+_V = TypeVar("_V")
+
+
+# Based on https://docs.python.org/3/howto/descriptor.html#properties
+class ManagedProperty:
     """Managed, required property for use with dataclasses."""
 
-    def __set_name__(self, owner, property_name: str) -> None:
-        # pylint: disable=attribute-defined-outside-init
-        self.property_name = property_name
+    def __init__(
+        self, class_: type, name: str, validator: Optional[Callable[..., _V]] = None
+    ) -> None:
+        setattr(class_, name, self)
+        self._name = name
+        self._validator = validator
+        # Prevent pydocmd from generating a subsection for managed properties
+        self.__doc__ = None
 
-    def __set__(self, obj, value) -> None:
-        # Check if the __init__() of a dataclass is passing the property
-        # itself as the "default" value.
-        # This occurs when a dataclass is instantiated without providing a value
-        # for this property.
-        if value is self:
-            raise TypeError(f"Missing value for property {self.property_name!r}")
-        super().__set__(obj, value)
+    def __get__(self, obj: _T, owner: Optional[type] = None) -> _V:
+        # If accessed as Class.property, return myself (the property object)
+        if obj is None:
+            return self
+        # If accessed as obj.property, return the actual value
+        # Bypass __getattribute__() to prevent infinite loop
+        return obj.__dict__[self._name]
+
+    def __set__(self, obj: _T, value: Any) -> None:
+        # pylint: disable=attribute-defined-outside-init
+        # Bypass __getattribute__() to prevent infinite loop
+        obj.__dict__[self._name] = self._validator(value)
+
+    def __call__(self, validator: Callable[..., _V]) -> Callable[..., _V]:
+        # Make this instance usable as a decorator
+        self._validator = validator
 
 
 FRAME_MAX = 144
@@ -185,57 +203,10 @@ DWORD_MAX = 0xFFFFFFFF
 class Record:
     """Represents an AnimData record entry."""
 
-    # pylint: disable=too-many-instance-attributes
-
-    cof_name: str = ManagedProperty(attrgetter("_cof_name"))
-
-    @cof_name.setter
-    def cof_name(self, value: str) -> str:
-        if not isinstance(value, str):
-            raise TypeError(f"cof_name must be a string (got {value!r})")
-        if len(value) != 7:
-            raise ValueError(
-                f"COF name must have exactly 7 characters. "
-                f"({value!r} has {len(value)})"
-            )
-        if "\0" in value:
-            raise ValueError(
-                f"COF name must not contain a null character. (found in {value!r})"
-            )
-        self._cof_name = value
-
-    frames_per_direction: int = ManagedProperty(attrgetter("_frames_per_direction"))
-
-    @frames_per_direction.setter
-    def frames_per_direction(self, value: int) -> int:
-        if not isinstance(value, int):
-            raise TypeError(f"frames_per_direction must be an integer (got {value!r})")
-        if not 0 <= value <= DWORD_MAX:
-            raise ValueError(
-                f"frames_per_direction must be between 0 and {DWORD_MAX}."
-                f"(got {value!r})"
-            )
-        self._frames_per_direction = value
-
-    animation_speed: int = ManagedProperty(attrgetter("_animation_speed"))
-
-    @animation_speed.setter
-    def animation_speed(self, value: int) -> int:
-        if not isinstance(value, int):
-            raise TypeError(f"animation_speed must be an integer (got {value!r})")
-        if not 0 <= value <= DWORD_MAX:
-            raise ValueError(
-                f"animation_speed must be between 0 and {DWORD_MAX}. (got {value!r})"
-            )
-        self._animation_speed = value
-
-    triggers: ActionTriggers = ManagedProperty(attrgetter("_triggers"))
-
-    @triggers.setter
-    def triggers(
-        self, value: Union[Iterable[Tuple[int, int]], Mapping[int, int]]
-    ) -> ActionTriggers:
-        self._triggers = ActionTriggers(value)
+    cof_name: str
+    frames_per_direction: int
+    animation_speed: int
+    triggers: ActionTriggers
 
     def make_dict(self) -> dict:
         """Returns a plain dict that can be serialized to another format."""
@@ -257,6 +228,51 @@ class Record:
             animation_speed=obj["animation_speed"],
             triggers={int(frame): code for frame, code in obj["triggers"].items()},
         )
+
+
+@ManagedProperty(Record, name="cof_name")
+def _validate_cof_name(value: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError(f"cof_name must be a string (got {value!r})")
+    if len(value) != 7:
+        raise ValueError(
+            f"COF name must have exactly 7 characters. " f"({value!r} has {len(value)})"
+        )
+    if "\0" in value:
+        raise ValueError(
+            f"COF name must not contain a null character. (found in {value!r})"
+        )
+    return value
+
+
+@ManagedProperty(Record, name="frames_per_direction")
+def _validate_frames_per_direction(value: int) -> int:
+    if not isinstance(value, int):
+        raise TypeError(f"frames_per_direction must be an integer (got {value!r})")
+    if not 0 <= value <= DWORD_MAX:
+        raise ValueError(
+            f"frames_per_direction must be between 0 and {DWORD_MAX}."
+            f"(got {value!r})"
+        )
+    return value
+
+
+@ManagedProperty(Record, name="animation_speed")
+def _validate_animation_speed(value: int) -> int:
+    if not isinstance(value, int):
+        raise TypeError(f"animation_speed must be an integer (got {value!r})")
+    if not 0 <= value <= DWORD_MAX:
+        raise ValueError(
+            f"animation_speed must be between 0 and {DWORD_MAX}. (got {value!r})"
+        )
+    return value
+
+
+@ManagedProperty(Record, name="triggers")
+def _validate_triggers(
+    value: Union[Iterable[Tuple[int, int]], Mapping[int, int]]
+) -> ActionTriggers:
+    return ActionTriggers(value)
 
 
 RECORD_FORMAT = f"<8sLL{FRAME_MAX}B"
