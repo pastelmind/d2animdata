@@ -25,7 +25,7 @@ def find_meta(meta: str) -> str:
     raise RuntimeError("Unable to find __{meta}__ string.".format(meta=meta))
 
 
-META_FILE = read("d2animdata.py")
+META_FILE = read("src/d2animdata.py")
 
 
 setup(
@@ -37,6 +37,7 @@ setup(
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     url="https://github.com/pastelmind/d2animdata",
+    package_dir={"": "src"},
     py_modules=["d2animdata"],
     entry_points={"console_scripts": "d2animdata = d2animdata:main"},
     python_requires=">=3.6",
