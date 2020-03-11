@@ -5,7 +5,7 @@ d2animdata is a command-line program for editing **AnimData.D2**. AnimData.D2 is
 
 d2animdata can *decompile* AnimData.D2 to text-based file formats, such as [tabbed text] and [JSON] (see [Supported File Formats] for more info). Modders can edit these files to add new animations or modify existing ones. After editing, d2animdata can *compile* it back to a new AnimData.D2 file.
 
-d2animdata is written in Python. It supports Python 3.7 and above, and has been tested on Windows 10 and Ubuntu Linux.
+d2animdata is written in Python. It supports Python 3.6 and above, and has been tested on Windows 10 and Ubuntu Linux.
 
 ⚠ This project is very much in Alpha. There may be several bugs. Always back up your AnimData.D2 file before using d2animdata.
 
