@@ -37,7 +37,7 @@ d2animdata <command> --help
 Decompiles an AnimData.D2 file to tabbed text or JSON file.
 
 ```console
-$ python d2animdata decompile --help
+$ d2animdata decompile --help
 usage: d2animdata decompile [-h] [--sort] (--json | --txt) animdata_d2 target
 
 positional arguments:
@@ -66,7 +66,7 @@ d2animdata decompile --txt path/to/AnimData.D2 path/to/my-animdata.txt
 Compiles a tabbed text or JSON file to AnimData.D2 file.
 
 ```console
-$ python d2animdata compile --help
+$ d2animdata compile --help
 usage: d2animdata compile [-h] [--sort] (--json | --txt) source animdata_d2
 
 positional arguments:
