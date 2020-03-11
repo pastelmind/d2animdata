@@ -1,4 +1,4 @@
 # Dependencies for building and testing
-setuptools~=41.2.0
+setuptools~=46.0.0
 tox~=3.14.5
 wheel~=0.34.2
