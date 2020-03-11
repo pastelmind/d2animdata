@@ -1,0 +1,9 @@
+preprocessor: pydocmd.preprocessors.rst.Preprocessor
+headers: markdown
+
+generate:
+- api.md: d2animdata++
+gens_dir: '.'
+
+pages:
+- api: api.md
