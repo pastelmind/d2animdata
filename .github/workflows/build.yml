@@ -19,7 +19,7 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
-      PIP_REQUIREMENTS: requirements-build-test.txt
+      PIP_REQUIREMENTS: requirements-build.txt
 
     steps:
     - uses: actions/checkout@v2
@@ -102,7 +102,7 @@ jobs:
     needs: build
     runs-on: ${{ matrix.os }}
     env:
-      PIP_REQUIREMENTS: requirements-build-test.txt
+      PIP_REQUIREMENTS: requirements-test.txt
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]

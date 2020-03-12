@@ -1,3 +1,0 @@
-# Dependencies for building and testing
-flit~=2.2.0
-tox~=3.14.5

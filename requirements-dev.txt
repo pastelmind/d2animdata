@@ -1,5 +1,6 @@
 # Dependencies for general development
--r requirements-build-test.txt
+-r requirements-build.txt
 -r requirements-lint.txt
+-r requirements-test.txt
 pipdeptree~=0.13.2
 pydoc-markdown~=2.1.2
