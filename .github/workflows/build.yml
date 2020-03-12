@@ -136,7 +136,7 @@ jobs:
           ${{ runner.os }}-pip-${{ matrix.python-version }}-
           ${{ runner.os }}-pip-
 
-    - name: Install development dependencies (${{ env.PIP_REQUIREMENTS }})
+    - name: Install dependencies (${{ env.PIP_REQUIREMENTS }})
       run: |
         python -m pip install --upgrade pip
         pip install -r ${{ env.PIP_REQUIREMENTS }}
