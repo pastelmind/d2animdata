@@ -1,4 +1,5 @@
-# This workflow will install Python dependencies and run tests.
+# This workflow provides jobs for building, linting, and testing the project.
+# It can also publish artifacts to PyPI.
 # Based on https://github.com/actions/starter-workflows/blob/master/ci/python-package.yml
 
 name: Build
