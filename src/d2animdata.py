@@ -26,6 +26,7 @@ __version__ = "0.1.0"
 # SOFTWARE.
 
 import argparse
+import collections
 import csv
 import dataclasses
 import itertools
@@ -384,10 +385,15 @@ def _sort_records_by_cof_name(records: List[Record]) -> None:
     records.sort(key=lambda record: record.cof_name)
 
 
-def _check_duplicate_cof_names(records: Iterable[Record]) -> None:
-    """Warns if a list of Record objects contains duplicate COF names.
+def _dedupe_cof_names(records: Iterable[Record]) -> Iterator[Record]:
+    """Warns about and removes Record objects with duplicate COF names.
+
+    Given an iterable of Record objects, lazily yields records that have been
+    deduplicated.
 
     :param records: Iterable of Record objects to check.
+    :return: Generator of Record objects that lazily deduplicates and logs
+        warnings.
     """
     cof_names_seen = set()
     for record in records:
@@ -395,6 +401,7 @@ def _check_duplicate_cof_names(records: Iterable[Record]) -> None:
             logger.warning(f"Duplicate entry found: {record.cof_name}")
         else:
             cof_names_seen.add(record.cof_name)
+            yield record
 
 
 def _check_out_of_bounds_triggers(record: Record) -> None:
@@ -606,6 +613,14 @@ def dump_txt(records: Iterable[Record], file: TextIO) -> None:
         )
 
 
+def _consume(iterator: Iterator) -> None:
+    """Efficiently consumes an iterator, doing nothing.
+
+    Based on https://docs.python.org/3/library/itertools.html#itertools-recipes
+    """
+    collections.deque(iterator, maxlen=0)
+
+
 def _init_subparser_compile(parser: argparse.ArgumentParser) -> None:
     """Initialize the argument subparser for the `compile` command."""
     parser.add_argument("source", help="JSON or tabbed text file to compile")
@@ -635,7 +650,7 @@ def _cli_compile(args: argparse.Namespace) -> None:
     else:
         raise ValueError("No file format specified")
 
-    _check_duplicate_cof_names(records)
+    _consume(_dedupe_cof_names(records))
     for record in records:
         _check_out_of_bounds_triggers(record)
     if args.sort:
@@ -667,7 +682,7 @@ def _cli_decompile(args: argparse.Namespace):
     with open(args.animdata_d2, mode="rb") as animdata_d2_file:
         records = load(animdata_d2_file)
 
-    _check_duplicate_cof_names(records)
+    _consume(_dedupe_cof_names(records))
     for record in records:
         _check_out_of_bounds_triggers(record)
     if args.sort:
