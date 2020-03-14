@@ -33,7 +33,6 @@ import itertools
 import json
 import logging
 import struct
-from collections import UserDict
 from typing import (
     Any,
     BinaryIO,
@@ -150,7 +149,7 @@ class _ManagedProperty:
 FRAME_MAX = 144
 
 
-class ActionTriggers(UserDict):
+class ActionTriggers(collections.UserDict):
     """Specialized dictionary that maps frame indices to trigger codes.
 
     Example usage:
