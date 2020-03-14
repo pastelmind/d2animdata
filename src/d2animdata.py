@@ -626,6 +626,9 @@ def _init_subparser_compile(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("source", help="JSON or tabbed text file to compile")
     parser.add_argument("animdata_d2", help="AnimData.D2 file to save to")
     parser.add_argument(
+        "--dedupe", action="store_true", help="Remove records with duplicate COF names",
+    )
+    parser.add_argument(
         "--sort",
         action="store_true",
         help="Sort the records alphabetically before saving",
@@ -650,7 +653,11 @@ def _cli_compile(args: argparse.Namespace) -> None:
     else:
         raise ValueError("No file format specified")
 
-    _consume(_dedupe_cof_names(records))
+    if args.dedupe:
+        records = list(_dedupe_cof_names(records))
+    else:
+        _consume(_dedupe_cof_names(records))
+
     for record in records:
         _check_out_of_bounds_triggers(record)
     if args.sort:
@@ -664,6 +671,9 @@ def _init_subparser_decompile(parser: argparse.ArgumentParser) -> None:
     """Initialize the argument subparser for the `decompile` command."""
     parser.add_argument("animdata_d2", help="AnimData.D2 file to decompile")
     parser.add_argument("target", help="JSON or tabbed text file to save to")
+    parser.add_argument(
+        "--dedupe", action="store_true", help="Remove records with duplicate COF names",
+    )
     parser.add_argument(
         "--sort",
         action="store_true",
@@ -682,7 +692,11 @@ def _cli_decompile(args: argparse.Namespace):
     with open(args.animdata_d2, mode="rb") as animdata_d2_file:
         records = load(animdata_d2_file)
 
-    _consume(_dedupe_cof_names(records))
+    if args.dedupe:
+        records = list(_dedupe_cof_names(records))
+    else:
+        _consume(_dedupe_cof_names(records))
+
     for record in records:
         _check_out_of_bounds_triggers(record)
     if args.sort:
