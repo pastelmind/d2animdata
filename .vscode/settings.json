@@ -1,10 +1,18 @@
 {
     "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true,
+        },
         "editor.formatOnSave": true,
     },
     "python.formatting.provider": "black",
     "python.jediEnabled": false,
     "python.linting.pylintEnabled": true,
     "python.pythonPath": "venv\\Scripts\\python.exe",
+    "python.sortImports.args": [
+        // Workaround for isort-on-save ignoring config file. See:
+        // https://github.com/Microsoft/vscode-python/issues/3306#issuecomment-437859016
+        "--settings-path=${workspaceFolder}",
+    ],
     "python.testing.unittestEnabled": true,
 }
