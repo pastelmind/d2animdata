@@ -156,13 +156,15 @@ See the [API docs](./api.md) for a complete reference of available functions and
 
 To develop d2animdata, you will want a good Python editor. I recommend [Visual Studio Code] with the [Microsoft Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
 
-To develop d2animdata, clone this repository and create a [virtual environment]. Then run the following command to install development dependencies:
+To develop d2animdata, clone this repository and create a [virtual environment]. Then run the following commands to install the project locally for development:
 
 ```sh
 # For Windows
 python -m pip install -r requirements-dev.txt
+flit install --pth-file
 # For non-Windows
 pip install -r requirements-dev.txt
+flit install
 ```
 
 d2animdata uses:
