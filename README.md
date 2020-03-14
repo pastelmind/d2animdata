@@ -38,7 +38,8 @@ Decompiles an AnimData.D2 file to tabbed text or JSON file.
 
 ```console
 $ d2animdata decompile --help
-usage: d2animdata decompile [-h] [--sort] (--json | --txt) animdata_d2 target
+usage: d2animdata decompile [-h] [--dedupe] [--sort] (--json | --txt)
+                            animdata_d2 target
 
 positional arguments:
   animdata_d2  AnimData.D2 file to decompile
@@ -46,6 +47,7 @@ positional arguments:
 
 optional arguments:
   -h, --help   show this help message and exit
+  --dedupe     Remove records with duplicate COF names
   --sort       Sort the records alphabetically before saving
   --json       Decompile to JSON
   --txt        Decompile to tabbed text (TXT)
@@ -67,7 +69,8 @@ Compiles a tabbed text or JSON file to AnimData.D2 file.
 
 ```console
 $ d2animdata compile --help
-usage: d2animdata compile [-h] [--sort] (--json | --txt) source animdata_d2
+usage: d2animdata compile [-h] [--dedupe] [--sort] (--json | --txt)
+                          source animdata_d2
 
 positional arguments:
   source       JSON or tabbed text file to compile
@@ -75,6 +78,7 @@ positional arguments:
 
 optional arguments:
   -h, --help   show this help message and exit
+  --dedupe     Remove records with duplicate COF names
   --sort       Sort the records alphabetically before saving
   --json       Compile JSON
   --txt        Compile tabbed text (TXT)
