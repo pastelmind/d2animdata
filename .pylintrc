@@ -10,9 +10,3 @@
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
 disable=bad-continuation
-
-[LOGGING]
-
-# Format style used to check logging format string. `old` means using %
-# formatting, `new` is for `{}` formatting,and `fstr` is for f-strings.
-logging-format-style=fstr
