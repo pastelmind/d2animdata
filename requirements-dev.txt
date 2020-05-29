@@ -3,7 +3,7 @@
 -r requirements-lint.txt
 -r requirements-test.txt
 pipdeptree==0.13.2
-  pip==20.0.2
+  pip==20.1.1
 pydoc-markdown==2.1.2
   Markdown==3.2.1
     setuptools==46.0.0
