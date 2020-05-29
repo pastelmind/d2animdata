@@ -343,7 +343,7 @@ def _unpack_record(buffer: bytes, offset: int = 0) -> Tuple[Record, int]:
             *frame_data,
         ) = struct.unpack_from(RECORD_FORMAT, buffer, offset=offset)
     except struct.error as error:
-        raise AnimDataError(f"Cannot unpack record", offset=offset) from error
+        raise AnimDataError("Cannot unpack record", offset=offset) from error
 
     try:
         # Assuming that RECORD_FORMAT is correct, all arguments for Record()
