@@ -94,4 +94,4 @@ pydoc-markdown==3.0.2
   six==1.15.0
   watchdog==0.10.2
     pathtools==0.1.2
-setuptools==46.0.0
+setuptools==47.1.1
