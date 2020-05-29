@@ -177,13 +177,13 @@ d2animdata uses:
 * [Tox] to run tests.
 * [Black] and [isort] to format code.
 * [Pylint] to check code.
-* [pydocmd] to generate API documentation from source code.
-    * Run `pydocmd generate` to generate `api.md`.
+* [pydoc-markdown] 3 to generate API documentation from source code.
+    * Run `pydoc-markdown -p d2animdata > api.md` to generate `api.md`.
 
 [Black]: https://github.com/psf/black
 [Flit]: https://flit.readthedocs.io/
 [isort]: https://timothycrosley.github.io/isort/
-[pydocmd]: https://niklasrosenstein.github.io/pydoc-markdown/
+[pydoc-markdown]: https://niklasrosenstein.github.io/pydoc-markdown/
 [Pylint]: https://www.pylint.org/
 [Tox]: https://tox.readthedocs.io/
 [virtual environment]: https://packaging.python.org/tutorials/installing-packages/#creating-virtual-environments
