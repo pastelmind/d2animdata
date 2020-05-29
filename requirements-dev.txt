@@ -12,15 +12,15 @@ pydoc-markdown==2.1.2
     Jinja2==2.11.1
       MarkupSafe==1.1.1
     livereload==2.6.1
-      six==1.14.0
+      six==1.15.0
       tornado==6.0.4
     lunr==0.5.6
       future==0.18.2
-      six==1.14.0
+      six==1.15.0
     Markdown==3.2.1
       setuptools==46.0.0
     PyYAML==5.3
     tornado==6.0.4
   PyYAML==5.3
-  six==1.14.0
+  six==1.15.0
   yapf==0.29.0
