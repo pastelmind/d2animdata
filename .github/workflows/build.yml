@@ -30,7 +30,7 @@ jobs:
         python-version: ${{ env.python-version }}
 
     - name: Cache dependencies
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ env.python-version }}-${{ hashFiles(env.PIP_REQUIREMENTS) }}
@@ -82,7 +82,7 @@ jobs:
         python-version: ${{ env.python-version }}
 
     - name: Cache dependencies
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ env.python-version }}-${{ hashFiles(env.PIP_REQUIREMENTS) }}
@@ -119,7 +119,7 @@ jobs:
     # Load different caches for each runner.os
     # Based on https://github.com/actions/cache/blob/master/examples.md#multiple-oss-in-a-workflow
     - name: Cache dependencies (Linux)
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       if: startsWith(runner.os, 'Linux')
       with:
         path: ~/.cache/pip
@@ -128,7 +128,7 @@ jobs:
           ${{ runner.os }}-pip-${{ matrix.python-version }}-
           ${{ runner.os }}-pip-
     - name: Cache dependencies (Windows)
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       if: startsWith(runner.os, 'Windows')
       with:
         path: ~\AppData\Local\pip\Cache
