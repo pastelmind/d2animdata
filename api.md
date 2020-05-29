@@ -1,36 +1,40 @@
+<a name=".d2animdata"></a>
+## d2animdata
 
-# d2animdata
 Read, write, and convert AnimData.D2 to JSON & tabbed TXT (and vice versa).
 
-## Error
+<a name=".d2animdata.Error"></a>
+### Error
+
 ```python
-Error(self, message: str)
+class Error(Exception)
 ```
+
 Base class for all exceptions raised by this module.
 
 ### Attributes:
 - `message`: Explanation of the error.
 
-## AnimDataError
+<a name=".d2animdata.AnimDataError"></a>
+### AnimDataError
+
 ```python
-AnimDataError(self,
-              message: str,
-              offset: typing.Union[int, NoneType] = None)
+class AnimDataError(Error)
 ```
+
 Raised when an operation on a binary AnimData.D2 file fails.
 
 ### Attributes:
 - `message`: Explanation of the error.
 - `offset`: Offset of the byte that caused the failure.
 
-## TabbedTextError
+<a name=".d2animdata.TabbedTextError"></a>
+### TabbedTextError
+
 ```python
-TabbedTextError(self,
-                message: str,
-                row: typing.Union[int, NoneType] = None,
-                column: typing.Union[int, NoneType] = None,
-                column_name: typing.Union[str, NoneType] = None)
+class TabbedTextError(Error)
 ```
+
 Raised when an operation on a tabbed text file fails.
 
 ### Attributes:
@@ -39,10 +43,13 @@ Raised when an operation on a tabbed text file fails.
 - `column`: Column index that caused the failure (starts at 0).
 - `column_name`: Name of the column that caused the failure.
 
-## hash_cof_name
+<a name=".d2animdata.hash_cof_name"></a>
+#### hash\_cof\_name
+
 ```python
-hash_cof_name(cof_name: str)
+hash_cof_name(cof_name: str) -> int
 ```
+
 Computes the block hash for the given COF name.
 
 **Arguments**:
@@ -53,18 +60,49 @@ Computes the block hash for the given COF name.
 
 Hash value as integer between 0 and 255, inclusive.
 
-## ActionTriggers
+<a name=".d2animdata._ManagedProperty.__get__"></a>
+#### \_\_get\_\_
+
 ```python
-ActionTriggers(self, dict=None, **kwargs)
+ | __get__(obj: _T, owner: Optional[type] = None) -> _V
 ```
+
+If accessed as Class.property, return myself (the property object)
+
+<a name=".d2animdata._ManagedProperty.__set__"></a>
+#### \_\_set\_\_
+
+```python
+ | __set__(obj: _T, value: Any) -> None
+```
+
+pylint: disable=attribute-defined-outside-init
+Bypass __getattribute__() to prevent infinite loop
+
+<a name=".d2animdata._ManagedProperty.__call__"></a>
+#### \_\_call\_\_
+
+```python
+ | __call__(validator: Callable[..., _V]) -> Callable[..., _V]
+```
+
+Make this instance usable as a decorator
+
+<a name=".d2animdata.ActionTriggers"></a>
+### ActionTriggers
+
+```python
+class ActionTriggers(collections.UserDict)
+```
+
 Specialized dictionary that maps frame indices to trigger codes.
 
 Example usage:
 
 ```python
 triggers = ActionTriggers()
-triggers[7] = 1     # Set trigger code 1 at frame #7
-triggers[10] = 2    # Set trigger code 2 at frame #10
+triggers[7] = 1     # Set trigger code 1 at frame `7`
+triggers[10] = 2    # Set trigger code 2 at frame `10`
 ```
 
 The above is equivalent to:
@@ -87,20 +125,27 @@ Iteration is guaranteed to be sorted by frame index in ascending order:
 for frame, code in triggers.items():
 ```
 
-### to_codes
+<a name=".d2animdata.ActionTriggers.to_codes"></a>
+#### to\_codes
+
 ```python
-ActionTriggers.to_codes()
+ | to_codes() -> Iterable[int]
 ```
+
 Yields a nonzero frame code for each trigger frame in order.
 
 **Returns**:
 
 Generator that yields trigger codes for each trigger frame.
 
-### from_codes
+<a name=".d2animdata.ActionTriggers.from_codes"></a>
+#### from\_codes
+
 ```python
-ActionTriggers.from_codes(frame_codes: typing.Iterable[int])
+ | @classmethod
+ | from_codes(cls, frame_codes: Iterable[int]) -> "ActionTriggers"
 ```
+
 Creates an ActionTriggers from an iterable of codes for every frame.
 
 **Arguments**:
@@ -116,11 +161,13 @@ New ActionTriggers dictionary.
 - `TypeError`: If a frame code is not an integer.
 - `ValueError`: If a frame code is invalid.
 
-## Record
+<a name=".d2animdata.Record"></a>
+### Record
+
 ```python
-Record(self, cof_name: str, frames_per_direction: int,
-       animation_speed: int, triggers: ActionTriggers)
+class Record()
 ```
+
 Represents an AnimData record entry.
 
 All attributes are validated on assignment, including the constructor. An
@@ -129,26 +176,33 @@ invalid value will raise `TypeError` or `ValueError`.
 ### Attributes:
 - `cof_name`: Read/write attribute. Accepts a 7-letter ASCII string.
 - `frames_per_direction`:
-    Read/write attribute. Accepts a nonnegative integer.
+Read/write attribute. Accepts a nonnegative integer.
 - `animation_speed`: Read/write attribute. Accepts a nonnegative integer.
 - `triggers`:
-    Read/write attribute. Accepts any mapping that can be converted to an
-    ActionTriggers dict.
+Read/write attribute. Accepts any mapping that can be converted to an
+ActionTriggers dict.
 
-### make_dict
+<a name=".d2animdata.Record.make_dict"></a>
+#### make\_dict
+
 ```python
-Record.make_dict()
+ | make_dict() -> dict
 ```
+
 Converts the Record to a dict that can be serialized to another format.
 
 **Returns**:
 
 Plain dict created from this Record.
 
-### from_dict
+<a name=".d2animdata.Record.from_dict"></a>
+#### from\_dict
+
 ```python
-Record.from_dict(obj: dict)
+ | @classmethod
+ | from_dict(cls, obj: dict) -> "Record"
 ```
+
 Creates a new record from a dict unserialized from another format.
 
 Trigger frame indices are automatically converted to integers in order
@@ -163,10 +217,13 @@ to support data formats that do not support integer mapping keys
 
 New Record object.
 
-## loads
+<a name=".d2animdata.loads"></a>
+#### loads
+
 ```python
-loads(data: bytes)
+loads(data: bytes) -> List[Record]
 ```
+
 Loads the contents of AnimData.D2 from binary `data`.
 
 **Arguments**:
@@ -181,10 +238,13 @@ List of `Record`s, ordered by their original order in the `data`.
 
 - `AnimDataError`: If the AnimData.D2 file is malformed or corrupted.
 
-## load
+<a name=".d2animdata.load"></a>
+#### load
+
 ```python
-load(file: BinaryIO)
+load(file: BinaryIO) -> List[Record]
 ```
+
 Loads the contents of AnimData.D2 from the a binary file.
 
 **Arguments**:
@@ -199,10 +259,13 @@ List of Record objects, maintaining their original order in `file`.
 
 - `AnimDataError`: If the AnimData.D2 file is malformed or corrupted.
 
-## dumps
+<a name=".d2animdata.dumps"></a>
+#### dumps
+
 ```python
-dumps(records: typing.Iterable[d2animdata.Record])
+dumps(records: Iterable[Record]) -> bytearray
 ```
+
 Packs AnimData records into AnimData.D2 hash table format.
 
 **Arguments**:
@@ -213,10 +276,13 @@ Packs AnimData records into AnimData.D2 hash table format.
 
 `bytearray` containing the packed AnimData.D2 file.
 
-## dump
+<a name=".d2animdata.dump"></a>
+#### dump
+
 ```python
-dump(records: typing.Iterable[d2animdata.Record], file: BinaryIO)
+dump(records: Iterable[Record], file: BinaryIO) -> None
 ```
+
 Packs AnimData records into AnimData.D2 format and writes them to a file.
 
 **Arguments**:
@@ -224,18 +290,21 @@ Packs AnimData records into AnimData.D2 format and writes them to a file.
 - `records`: Iterable of Record objects to write.
 - `file`: Writable file object opened in binary mode (`mode='wb'`).
 
-## load_txt
+<a name=".d2animdata.load_txt"></a>
+#### load\_txt
+
 ```python
-load_txt(file: typing.Iterable[str])
+load_txt(file: Iterable[str]) -> List[Record]
 ```
+
 Loads AnimData records from a tabbed text file.
 
 **Arguments**:
 
 - `file`: 
-    A text file object, or any object which supports the iterator protocol
-    and returns a string each time its `__next__()` method is called.
-    If `file` is a file object, it should be opened with `newline=''`.
+A text file object, or any object which supports the iterator protocol
+and returns a string each time its `__next__()` method is called.
+If `file` is a file object, it should be opened with `newline=''`.
 
 **Returns**:
 
@@ -245,25 +314,32 @@ List of `Record`s loaded from the `file`.
 
 - `TabbedTextError`: If the tabbed text file cannot be loaded.
 
-## dump_txt
+<a name=".d2animdata.dump_txt"></a>
+#### dump\_txt
+
 ```python
-dump_txt(records: typing.Iterable[d2animdata.Record], file: TextIO)
+dump_txt(records: Iterable[Record], file: TextIO) -> None
 ```
+
 Saves AnimData records to a tabbed text file.
 
 **Arguments**:
 
 - `records`: Iterable of `Record`s to write to the `file`.
 - `file`: 
-    A text file object, or any any object with a `write()` method.
-    If `file` is a file object, it should be opened with `newline=''`.
+A text file object, or any any object with a `write()` method.
+If `file` is a file object, it should be opened with `newline=''`.
 
-## main
+<a name=".d2animdata.main"></a>
+#### main
+
 ```python
-main(argv: typing.List[str] = None)
+main(argv: List[str] = None) -> None
 ```
+
 Entrypoint for the CLI script.
 
 **Arguments**:
 
 - `argv`: List of argument strings. If not given, `sys.argv[1:]` is used.
+
