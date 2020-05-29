@@ -46,3 +46,9 @@ skip_glob = [
     "var",
     "venv",
 ]
+
+[tool.pylint.messages-control]
+disable="""
+    bad-continuation,
+    logging-fstring-interpolation,
+"""
