@@ -90,7 +90,7 @@ pydoc-markdown==3.0.2
         nr.metaclass==0.0.5
         six==1.15.0
       typing==3.7.4.1
-  PyYAML==5.3.1
+  PyYAML==5.4
   six==1.15.0
   watchdog==0.10.2
     pathtools==0.1.2
