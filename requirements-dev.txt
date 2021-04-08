@@ -2,96 +2,268 @@
 -r requirements-build.txt
 -r requirements-lint.txt
 -r requirements-test.txt
-pipdeptree==0.13.2
-  pip==20.1.1
-pydoc-markdown==3.0.2
+pipdeptree==2.0.0
+  pip==21.0.1
+pydoc-markdown==3.10.1
   click==7.1.2
+  docspec==0.2.1
+    nr.databind.core==0.0.22
+      nr.collections==0.0.1
+        nr.metaclass==0.0.6
+        six==1.15.0
+      nr.interface==0.0.4
+        nr.collections==0.0.1
+          nr.metaclass==0.0.6
+          six==1.15.0
+        nr.metaclass==0.0.6
+        nr.pylang.utils==0.0.4
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+        six==1.15.0
+      nr.pylang.utils==0.0.4
+        nr.collections==0.0.1
+          nr.metaclass==0.0.6
+          six==1.15.0
+      nr.stream==0.0.5
+        nr.collections==0.0.1
+          nr.metaclass==0.0.6
+          six==1.15.0
+        nr.pylang.utils==0.0.4
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+        six==1.15.0
+    nr.databind.json==0.0.14
+      nr.collections==0.0.1
+        nr.metaclass==0.0.6
+        six==1.15.0
+      nr.databind.core==0.0.22
+        nr.collections==0.0.1
+          nr.metaclass==0.0.6
+          six==1.15.0
+        nr.interface==0.0.4
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+          nr.metaclass==0.0.6
+          nr.pylang.utils==0.0.4
+            nr.collections==0.0.1
+              nr.metaclass==0.0.6
+              six==1.15.0
+          six==1.15.0
+        nr.pylang.utils==0.0.4
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+        nr.stream==0.0.5
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+          nr.pylang.utils==0.0.4
+            nr.collections==0.0.1
+              nr.metaclass==0.0.6
+              six==1.15.0
+          six==1.15.0
+      nr.interface==0.0.4
+        nr.collections==0.0.1
+          nr.metaclass==0.0.6
+          six==1.15.0
+        nr.metaclass==0.0.6
+        nr.pylang.utils==0.0.4
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+        six==1.15.0
+      nr.parsing.date==0.6.1
+        nr.utils.re==0.1.1
+      nr.pylang.utils==0.0.4
+        nr.collections==0.0.1
+          nr.metaclass==0.0.6
+          six==1.15.0
+  docspec-python==0.1.0
+    docspec==0.2.1
+      nr.databind.core==0.0.22
+        nr.collections==0.0.1
+          nr.metaclass==0.0.6
+          six==1.15.0
+        nr.interface==0.0.4
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+          nr.metaclass==0.0.6
+          nr.pylang.utils==0.0.4
+            nr.collections==0.0.1
+              nr.metaclass==0.0.6
+              six==1.15.0
+          six==1.15.0
+        nr.pylang.utils==0.0.4
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+        nr.stream==0.0.5
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+          nr.pylang.utils==0.0.4
+            nr.collections==0.0.1
+              nr.metaclass==0.0.6
+              six==1.15.0
+          six==1.15.0
+      nr.databind.json==0.0.14
+        nr.collections==0.0.1
+          nr.metaclass==0.0.6
+          six==1.15.0
+        nr.databind.core==0.0.22
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+          nr.interface==0.0.4
+            nr.collections==0.0.1
+              nr.metaclass==0.0.6
+              six==1.15.0
+            nr.metaclass==0.0.6
+            nr.pylang.utils==0.0.4
+              nr.collections==0.0.1
+                nr.metaclass==0.0.6
+                six==1.15.0
+            six==1.15.0
+          nr.pylang.utils==0.0.4
+            nr.collections==0.0.1
+              nr.metaclass==0.0.6
+              six==1.15.0
+          nr.stream==0.0.5
+            nr.collections==0.0.1
+              nr.metaclass==0.0.6
+              six==1.15.0
+            nr.pylang.utils==0.0.4
+              nr.collections==0.0.1
+                nr.metaclass==0.0.6
+                six==1.15.0
+            six==1.15.0
+        nr.interface==0.0.4
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+          nr.metaclass==0.0.6
+          nr.pylang.utils==0.0.4
+            nr.collections==0.0.1
+              nr.metaclass==0.0.6
+              six==1.15.0
+          six==1.15.0
+        nr.parsing.date==0.6.1
+          nr.utils.re==0.1.1
+        nr.pylang.utils==0.0.4
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+    nr.sumtype==0.0.4
+      nr.metaclass==0.0.6
+      nr.stream==0.0.5
+        nr.collections==0.0.1
+          nr.metaclass==0.0.6
+          six==1.15.0
+        nr.pylang.utils==0.0.4
+          nr.collections==0.0.1
+            nr.metaclass==0.0.6
+            six==1.15.0
+        six==1.15.0
   nr.collections==0.0.1
-    nr.metaclass==0.0.5
+    nr.metaclass==0.0.6
     six==1.15.0
-  nr.databind.core==0.0.14
+  nr.databind.core==0.0.22
     nr.collections==0.0.1
-      nr.metaclass==0.0.5
+      nr.metaclass==0.0.6
       six==1.15.0
-    nr.interface==0.0.2
+    nr.interface==0.0.4
       nr.collections==0.0.1
-        nr.metaclass==0.0.5
+        nr.metaclass==0.0.6
         six==1.15.0
-      nr.metaclass==0.0.5
-      nr.pylang.utils==0.0.2
+      nr.metaclass==0.0.6
+      nr.pylang.utils==0.0.4
         nr.collections==0.0.1
-          nr.metaclass==0.0.5
+          nr.metaclass==0.0.6
           six==1.15.0
-        typing==3.7.4.1
       six==1.15.0
-    nr.pylang.utils==0.0.2
+    nr.pylang.utils==0.0.4
       nr.collections==0.0.1
-        nr.metaclass==0.0.5
+        nr.metaclass==0.0.6
         six==1.15.0
-      typing==3.7.4.1
-    nr.stream==0.0.3
+    nr.stream==0.0.5
       nr.collections==0.0.1
-        nr.metaclass==0.0.5
+        nr.metaclass==0.0.6
         six==1.15.0
-      nr.pylang.utils==0.0.2
+      nr.pylang.utils==0.0.4
         nr.collections==0.0.1
-          nr.metaclass==0.0.5
+          nr.metaclass==0.0.6
           six==1.15.0
-        typing==3.7.4.1
       six==1.15.0
-  nr.databind.json==0.0.9
+  nr.databind.json==0.0.14
     nr.collections==0.0.1
-      nr.metaclass==0.0.5
+      nr.metaclass==0.0.6
       six==1.15.0
-    nr.databind.core==0.0.14
+    nr.databind.core==0.0.22
       nr.collections==0.0.1
-        nr.metaclass==0.0.5
+        nr.metaclass==0.0.6
         six==1.15.0
-      nr.interface==0.0.2
+      nr.interface==0.0.4
         nr.collections==0.0.1
-          nr.metaclass==0.0.5
+          nr.metaclass==0.0.6
           six==1.15.0
-        nr.metaclass==0.0.5
-        nr.pylang.utils==0.0.2
+        nr.metaclass==0.0.6
+        nr.pylang.utils==0.0.4
           nr.collections==0.0.1
-            nr.metaclass==0.0.5
+            nr.metaclass==0.0.6
             six==1.15.0
-          typing==3.7.4.1
         six==1.15.0
-      nr.pylang.utils==0.0.2
+      nr.pylang.utils==0.0.4
         nr.collections==0.0.1
-          nr.metaclass==0.0.5
+          nr.metaclass==0.0.6
           six==1.15.0
-        typing==3.7.4.1
-      nr.stream==0.0.3
+      nr.stream==0.0.5
         nr.collections==0.0.1
-          nr.metaclass==0.0.5
+          nr.metaclass==0.0.6
           six==1.15.0
-        nr.pylang.utils==0.0.2
+        nr.pylang.utils==0.0.4
           nr.collections==0.0.1
-            nr.metaclass==0.0.5
+            nr.metaclass==0.0.6
             six==1.15.0
-          typing==3.7.4.1
         six==1.15.0
-    nr.interface==0.0.2
+    nr.interface==0.0.4
       nr.collections==0.0.1
-        nr.metaclass==0.0.5
+        nr.metaclass==0.0.6
         six==1.15.0
-      nr.metaclass==0.0.5
-      nr.pylang.utils==0.0.2
+      nr.metaclass==0.0.6
+      nr.pylang.utils==0.0.4
         nr.collections==0.0.1
-          nr.metaclass==0.0.5
+          nr.metaclass==0.0.6
           six==1.15.0
-        typing==3.7.4.1
       six==1.15.0
-    nr.parsing.date==0.1.0
-    nr.pylang.utils==0.0.2
+    nr.parsing.date==0.6.1
+      nr.utils.re==0.1.1
+    nr.pylang.utils==0.0.4
       nr.collections==0.0.1
-        nr.metaclass==0.0.5
+        nr.metaclass==0.0.6
         six==1.15.0
-      typing==3.7.4.1
-  PyYAML==5.3.1
+  nr.fs==1.6.3
+    six==1.15.0
+  nr.interface==0.0.4
+    nr.collections==0.0.1
+      nr.metaclass==0.0.6
+      six==1.15.0
+    nr.metaclass==0.0.6
+    nr.pylang.utils==0.0.4
+      nr.collections==0.0.1
+        nr.metaclass==0.0.6
+        six==1.15.0
+    six==1.15.0
+  PyYAML==5.4.1
+  requests==2.25.1
+    certifi==2020.12.5
+    chardet==4.0.0
+    idna==2.10
+    urllib3==1.26.4
   six==1.15.0
-  watchdog==0.10.2
-    pathtools==0.1.2
-setuptools==47.1.1
+  toml==0.10.2
+  watchdog==1.0.2
+setuptools==54.2.0

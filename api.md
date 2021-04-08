@@ -1,12 +1,13 @@
-<a name=".d2animdata"></a>
-## d2animdata
+<a name="d2animdata"></a>
+# d2animdata
 
 Read, write, and convert AnimData.D2 to JSON & tabbed TXT (and vice versa).
 
-<a name=".d2animdata.Error"></a>
-### Error
+<a name="d2animdata.Error"></a>
+## Error Objects
 
 ```python
+@dataclasses.dataclass(eq=False)
 class Error(Exception)
 ```
 
@@ -15,10 +16,11 @@ Base class for all exceptions raised by this module.
 ### Attributes:
 - `message`: Explanation of the error.
 
-<a name=".d2animdata.AnimDataError"></a>
-### AnimDataError
+<a name="d2animdata.AnimDataError"></a>
+## AnimDataError Objects
 
 ```python
+@dataclasses.dataclass(eq=False)
 class AnimDataError(Error)
 ```
 
@@ -28,10 +30,11 @@ Raised when an operation on a binary AnimData.D2 file fails.
 - `message`: Explanation of the error.
 - `offset`: Offset of the byte that caused the failure.
 
-<a name=".d2animdata.TabbedTextError"></a>
-### TabbedTextError
+<a name="d2animdata.TabbedTextError"></a>
+## TabbedTextError Objects
 
 ```python
+@dataclasses.dataclass(eq=False)
 class TabbedTextError(Error)
 ```
 
@@ -43,7 +46,7 @@ Raised when an operation on a tabbed text file fails.
 - `column`: Column index that caused the failure (starts at 0).
 - `column_name`: Name of the column that caused the failure.
 
-<a name=".d2animdata.hash_cof_name"></a>
+<a name="d2animdata.hash_cof_name"></a>
 #### hash\_cof\_name
 
 ```python
@@ -60,36 +63,8 @@ Computes the block hash for the given COF name.
 
 Hash value as integer between 0 and 255, inclusive.
 
-<a name=".d2animdata._ManagedProperty.__get__"></a>
-#### \_\_get\_\_
-
-```python
- | __get__(obj: _T, owner: Optional[type] = None) -> _V
-```
-
-If accessed as Class.property, return myself (the property object)
-
-<a name=".d2animdata._ManagedProperty.__set__"></a>
-#### \_\_set\_\_
-
-```python
- | __set__(obj: _T, value: Any) -> None
-```
-
-pylint: disable=attribute-defined-outside-init
-Bypass __getattribute__() to prevent infinite loop
-
-<a name=".d2animdata._ManagedProperty.__call__"></a>
-#### \_\_call\_\_
-
-```python
- | __call__(validator: Callable[..., _V]) -> Callable[..., _V]
-```
-
-Make this instance usable as a decorator
-
-<a name=".d2animdata.ActionTriggers"></a>
-### ActionTriggers
+<a name="d2animdata.ActionTriggers"></a>
+## ActionTriggers Objects
 
 ```python
 class ActionTriggers(collections.UserDict)
@@ -125,7 +100,7 @@ Iteration is guaranteed to be sorted by frame index in ascending order:
 for frame, code in triggers.items():
 ```
 
-<a name=".d2animdata.ActionTriggers.to_codes"></a>
+<a name="d2animdata.ActionTriggers.to_codes"></a>
 #### to\_codes
 
 ```python
@@ -138,7 +113,7 @@ Yields a nonzero frame code for each trigger frame in order.
 
 Generator that yields trigger codes for each trigger frame.
 
-<a name=".d2animdata.ActionTriggers.from_codes"></a>
+<a name="d2animdata.ActionTriggers.from_codes"></a>
 #### from\_codes
 
 ```python
@@ -161,10 +136,11 @@ New ActionTriggers dictionary.
 - `TypeError`: If a frame code is not an integer.
 - `ValueError`: If a frame code is invalid.
 
-<a name=".d2animdata.Record"></a>
-### Record
+<a name="d2animdata.Record"></a>
+## Record Objects
 
 ```python
+@dataclasses.dataclass
 class Record()
 ```
 
@@ -182,7 +158,7 @@ Read/write attribute. Accepts a nonnegative integer.
 Read/write attribute. Accepts any mapping that can be converted to an
 ActionTriggers dict.
 
-<a name=".d2animdata.Record.make_dict"></a>
+<a name="d2animdata.Record.make_dict"></a>
 #### make\_dict
 
 ```python
@@ -195,7 +171,7 @@ Converts the Record to a dict that can be serialized to another format.
 
 Plain dict created from this Record.
 
-<a name=".d2animdata.Record.from_dict"></a>
+<a name="d2animdata.Record.from_dict"></a>
 #### from\_dict
 
 ```python
@@ -217,7 +193,7 @@ to support data formats that do not support integer mapping keys
 
 New Record object.
 
-<a name=".d2animdata.loads"></a>
+<a name="d2animdata.loads"></a>
 #### loads
 
 ```python
@@ -238,7 +214,7 @@ List of `Record`s, ordered by their original order in the `data`.
 
 - `AnimDataError`: If the AnimData.D2 file is malformed or corrupted.
 
-<a name=".d2animdata.load"></a>
+<a name="d2animdata.load"></a>
 #### load
 
 ```python
@@ -259,7 +235,7 @@ List of Record objects, maintaining their original order in `file`.
 
 - `AnimDataError`: If the AnimData.D2 file is malformed or corrupted.
 
-<a name=".d2animdata.dumps"></a>
+<a name="d2animdata.dumps"></a>
 #### dumps
 
 ```python
@@ -276,7 +252,7 @@ Packs AnimData records into AnimData.D2 hash table format.
 
 `bytearray` containing the packed AnimData.D2 file.
 
-<a name=".d2animdata.dump"></a>
+<a name="d2animdata.dump"></a>
 #### dump
 
 ```python
@@ -290,7 +266,7 @@ Packs AnimData records into AnimData.D2 format and writes them to a file.
 - `records`: Iterable of Record objects to write.
 - `file`: Writable file object opened in binary mode (`mode='wb'`).
 
-<a name=".d2animdata.load_txt"></a>
+<a name="d2animdata.load_txt"></a>
 #### load\_txt
 
 ```python
@@ -302,9 +278,9 @@ Loads AnimData records from a tabbed text file.
 **Arguments**:
 
 - `file`: 
-A text file object, or any object which supports the iterator protocol
-and returns a string each time its `__next__()` method is called.
-If `file` is a file object, it should be opened with `newline=''`.
+    A text file object, or any object which supports the iterator protocol
+    and returns a string each time its `__next__()` method is called.
+    If `file` is a file object, it should be opened with `newline=''`.
 
 **Returns**:
 
@@ -314,7 +290,7 @@ List of `Record`s loaded from the `file`.
 
 - `TabbedTextError`: If the tabbed text file cannot be loaded.
 
-<a name=".d2animdata.dump_txt"></a>
+<a name="d2animdata.dump_txt"></a>
 #### dump\_txt
 
 ```python
@@ -327,10 +303,10 @@ Saves AnimData records to a tabbed text file.
 
 - `records`: Iterable of `Record`s to write to the `file`.
 - `file`: 
-A text file object, or any any object with a `write()` method.
-If `file` is a file object, it should be opened with `newline=''`.
+    A text file object, or any any object with a `write()` method.
+    If `file` is a file object, it should be opened with `newline=''`.
 
-<a name=".d2animdata.main"></a>
+<a name="d2animdata.main"></a>
 #### main
 
 ```python

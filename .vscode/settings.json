@@ -6,7 +6,7 @@
         "editor.formatOnSave": true,
     },
     "python.formatting.provider": "black",
-    "python.jediEnabled": false,
+    "python.languageServer": "Microsoft",
     "python.linting.pylintEnabled": true,
     "python.pythonPath": "venv\\Scripts\\python.exe",
     "python.sortImports.args": [
