@@ -146,7 +146,10 @@ class TestCompile(unittest.TestCase):
         )
 
         mock_open.assert_has_calls(
-            [mock.call("AnimData.json-file"), mock.call("AnimData.D2-file", mode="wb"),]
+            [
+                mock.call("AnimData.json-file"),
+                mock.call("AnimData.D2-file", mode="wb"),
+            ]
         )
         animdata_d2_file.close.assert_called_once_with()
         self.assertEqual(animdata_d2_file.getvalue(), DUPLICATE_COF_ANIMDATA)
@@ -167,7 +170,10 @@ class TestCompile(unittest.TestCase):
         )
 
         mock_open.assert_has_calls(
-            [mock.call("AnimData.json-file"), mock.call("AnimData.D2-file", mode="wb"),]
+            [
+                mock.call("AnimData.json-file"),
+                mock.call("AnimData.D2-file", mode="wb"),
+            ]
         )
         animdata_d2_file.close.assert_called_once_with()
         self.assertEqual(animdata_d2_file.getvalue(), DEDUPED_ANIMDATA)

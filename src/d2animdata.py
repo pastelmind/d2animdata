@@ -526,7 +526,8 @@ def _get_int_cell(row: List[str], column_index: int) -> int:
         return int(_get_cell(row, column_index))
     except ValueError as error:
         raise TabbedTextError(
-            "Cannot convert cell value to integer", column=column_index,
+            "Cannot convert cell value to integer",
+            column=column_index,
         ) from error
 
 
@@ -625,7 +626,9 @@ def _init_subparser_compile(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("source", help="JSON or tabbed text file to compile")
     parser.add_argument("animdata_d2", help="AnimData.D2 file to save to")
     parser.add_argument(
-        "--dedupe", action="store_true", help="Remove records with duplicate COF names",
+        "--dedupe",
+        action="store_true",
+        help="Remove records with duplicate COF names",
     )
     parser.add_argument(
         "--sort",
@@ -671,7 +674,9 @@ def _init_subparser_decompile(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("animdata_d2", help="AnimData.D2 file to decompile")
     parser.add_argument("target", help="JSON or tabbed text file to save to")
     parser.add_argument(
-        "--dedupe", action="store_true", help="Remove records with duplicate COF names",
+        "--dedupe",
+        action="store_true",
+        help="Remove records with duplicate COF names",
     )
     parser.add_argument(
         "--sort",
