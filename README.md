@@ -1,5 +1,5 @@
 # d2animdata
-![Build status](https://github.com/pastelmind/d2animdata/workflows/Build/badge.svg)
+[![Build status](https://github.com/pastelmind/d2animdata/actions/workflows/build.yml/badge.svg)](https://github.com/pastelmind/d2animdata/actions/workflows/build.yml) [![PyPI](https://img.shields.io/pypi/v/d2animdata)](https://pypi.org/project/d2animdata) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/d2animdata)
 
 d2animdata is a command-line program for editing **AnimData.D2**. AnimData.D2 is a propriety file format used by [Diablo 2] to store animation metadata for characters and monsters.
 
