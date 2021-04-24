@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Read, write, and convert AnimData.D2 to JSON & tabbed TXT (and vice versa)."""
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 # MIT License
 
