@@ -262,7 +262,7 @@ pydoc-markdown==3.10.1
     certifi==2020.12.5
     chardet==4.0.0
     idna==2.10
-    urllib3==1.26.4
+    urllib3==1.26.5
   six==1.15.0
   toml==0.10.2
   watchdog==1.0.2
