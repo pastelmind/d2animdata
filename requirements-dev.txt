@@ -3,7 +3,7 @@
 -r requirements-lint.txt
 -r requirements-test.txt
 pipdeptree==2.0.0
-  pip==21.0.1
+  pip==21.1
 pydoc-markdown==3.10.1
   click==7.1.2
   docspec==0.2.1
