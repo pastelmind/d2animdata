@@ -266,4 +266,4 @@ pydoc-markdown==3.10.1
   six==1.15.0
   toml==0.10.2
   watchdog==1.0.2
-setuptools==54.2.0
+setuptools==65.5.1
